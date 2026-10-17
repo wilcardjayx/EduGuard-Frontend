@@ -150,7 +150,23 @@ async function runScan() {
 
     if (emptyState) emptyState.classList.add('hidden');
     if (resultsHeader) resultsHeader.classList.add('hidden');
-    if (findingsContainer) findingsContainer.innerHTML = '';
+    if (findingsContainer) {
+        findingsContainer.classList.add('scanning', 'scan-progress-active');
+        findingsContainer.innerHTML = `
+            <div class="findings-scan-progress bg-[#181818] border border-[#2E2E2E] rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+                <div class="findings-progress-track mb-6">
+                    <div class="findings-progress-fill"></div>
+                </div>
+                <div class="flex flex-col items-center justify-center py-8 space-y-3">
+                    <div class="relative">
+                        <div class="w-14 h-14 border-4 border-[#2E2E2E] border-t-[#E2FF32] rounded-full animate-spin"></div>
+                    </div>
+                    <h3 class="font-display text-xl text-white font-medium">${aiModel} is Auditing...</h3>
+                    <p class="font-mono text-xs text-neutral-400">Initiating perimeter inspection and deterministic AST analysis...</p>
+                </div>
+            </div>
+        `;
+    }
     
     if (loadingTitle) {
         loadingTitle.textContent = `${aiModel} is Auditing...`;
@@ -261,13 +277,17 @@ async function runScan() {
     }
 }
 
+let currentAuditReportData = null;
+
 // Render Results with Consigna Bento Scorecard
 function renderResults(data) {
+    currentAuditReportData = data;
     const resultsHeader = document.getElementById('resultsHeader');
     const gradeBadge = document.getElementById('gradeBadge');
     const totalFindingsEl = document.getElementById('totalFindings');
     const fallbackBadgeContainer = document.getElementById('fallbackBadgeContainer');
     const container = document.getElementById('findingsContainer');
+    if (container) container.classList.remove('scanning', 'scan-progress-active');
 
     if (resultsHeader) resultsHeader.classList.remove('hidden');
     
@@ -724,3 +744,76 @@ function renderGemmaDisconnectedWriteup(modelName) {
         </div>
     `;
 }
+
+// Institutional CSV Export for findings
+function exportFindingsCSV() {
+    const data = currentAuditReportData;
+    const findings = data && data.findings ? data.findings : [];
+    if (findings.length === 0) {
+        if (window.EduToast) {
+            window.EduToast.show({
+                id: 'csv-export-empty',
+                title: 'No Findings to Export',
+                description: 'The active audit report has no findings to export.',
+                stage: 'error'
+            });
+        }
+        return;
+    }
+
+    const headers = [
+        "Finding ID",
+        "Severity",
+        "OWASP ASVS Standard",
+        "Title",
+        "Compliance Impact",
+        "Description",
+        "Remediation Summary",
+        "Patched Snippet / Diff",
+        "Security Grade"
+    ];
+
+    const escapeCsv = (str) => {
+        if (str === undefined || str === null) return '""';
+        const clean = String(str).replace(/"/g, '""');
+        return `"${clean}"`;
+    };
+
+    const rows = findings.map((f, idx) => {
+        const remediation = (data.remediations && data.remediations[idx]) ? data.remediations[idx] : {};
+        return [
+            escapeCsv(f.id || f.check_id || `EDU-${idx + 1}`),
+            escapeCsv(f.severity || 'HIGH'),
+            escapeCsv(f.owasp_asvs_id || 'ASVS v4.0'),
+            escapeCsv(f.title || 'Vulnerability Finding'),
+            escapeCsv(f.compliance_impact || 'FERPA §99.31'),
+            escapeCsv(f.description || ''),
+            escapeCsv(remediation.executive_summary || ''),
+            escapeCsv(remediation.patched_code_snippet || remediation.unified_diff || ''),
+            escapeCsv(data.security_grade || 'C')
+        ].join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filename = `eduguard_findings_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    if (window.EduToast) {
+        window.EduToast.show({
+            id: 'csv-export-success',
+            title: 'CSV Export Generated',
+            description: `Exported ${findings.length} findings to ${filename} for spreadsheets.`,
+            stage: 'success'
+        });
+    }
+}
+window.exportFindingsCSV = exportFindingsCSV;
+

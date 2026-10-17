@@ -92,9 +92,13 @@
                                 Dev Patch Diff
                             </button>
                         </div>
-                        <button type="button" onclick="window.print()" class="px-5 py-2 border border-charcoal-500 rounded-full text-xs sm:text-sm font-medium hover:bg-charcoal-600 hover:text-white transition-colors flex items-center gap-2">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                            Export Client PDF
+                        <button type="button" onclick="exportFindingsCSV()" class="px-4 py-2 border border-charcoal-500 bg-charcoal-800 text-alabaster hover:border-acid hover:text-acid rounded-full text-xs sm:text-sm font-mono font-medium transition-colors flex items-center gap-2 cursor-pointer shadow-sm">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-acid"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Export CSV
+                        </button>
+                        <button type="button" onclick="window.print()" class="px-4 py-2 border border-charcoal-500 bg-charcoal-800 text-alabaster hover:bg-charcoal-600 hover:text-white rounded-full text-xs sm:text-sm font-mono font-medium transition-colors flex items-center gap-2 cursor-pointer shadow-sm">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-tangerine"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            Export PDF
                         </button>
                     </div>
                 </div>

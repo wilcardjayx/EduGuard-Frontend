@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
+import { motion } from 'framer-motion';
 import { 
   ShieldAlert, 
   Terminal, 
@@ -8,10 +9,8 @@ import {
   Play, 
   CheckCircle2, 
   AlertTriangle, 
-  FileCode, 
   FileText, 
   Cpu, 
-  Layers, 
   ExternalLink, 
   ChevronRight, 
   Menu, 
@@ -30,10 +29,7 @@ import {
   Filter,
   ArrowUpRight,
   Database,
-  GitBranch,
   Download,
-  Server,
-  Code2,
   RefreshCw,
   WifiOff,
   Activity
@@ -415,6 +411,37 @@ const DEFAULT_SCAN_HISTORY: ScanReport[] = [
   }
 ];
 
+// Framer Motion Staggered Entrance Variants for Findings Bento Cards
+const findingsContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.08
+    }
+  }
+};
+
+const findingCardVariants = {
+  hidden: { 
+    opacity: 0, 
+    y: 28,
+    scale: 0.98
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 260,
+      damping: 24,
+      mass: 0.8
+    }
+  }
+};
+
 export default function App() {
   const [activePage, setActivePage] = useState<'landing' | 'audit' | 'templates' | 'owasp' | 'engine'>('landing');
   const [selectedModel, setSelectedModel] = useState<string>('gemma4:e4b');
@@ -455,16 +482,10 @@ export default function App() {
   const [historySearch, setHistorySearch] = useState<string>('');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'critical' | 'passing'>('all');
 
-  // GitHub & Backend Integration Modal State
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
-  const [activeSyncTab, setActiveSyncTab] = useState<'github' | 'backend' | 'files'>('github');
-  const [copiedSyncCmd, setCopiedSyncCmd] = useState<string | null>(null);
-
   // Gemma Engine Connectivity State (Suppresses generic output if not connected)
   const [isGemmaConnected, setIsGemmaConnected] = useState<boolean>(false);
   const [isProbingGemma, setIsProbingGemma] = useState<boolean>(false);
   const [showDisconnectedWriteup, setShowDisconnectedWriteup] = useState<boolean>(true);
-  const [copiedCmdId, setCopiedCmdId] = useState<string | null>(null);
 
   // Check Gemma live probe
   const checkGemmaLiveStatus = async (silent = false) => {
@@ -496,7 +517,7 @@ export default function App() {
     setIsGemmaConnected(false);
     if (!silent) {
       toast.error("Gemma Engine Offline", {
-        description: "Local daemon at localhost:11434 / localhost:8000 is unreachable. Run 'ollama run gemma:2b'.",
+        description: "Local daemon at localhost:11434 / localhost:8000 is unreachable.",
         style: {
           background: '#181818',
           border: '1px solid #FF6B2B',
@@ -507,21 +528,6 @@ export default function App() {
     }
     setIsProbingGemma(false);
     return false;
-  };
-
-  const copyCmd = (cmd: string, id: string) => {
-    navigator.clipboard.writeText(cmd);
-    setCopiedCmdId(id);
-    setTimeout(() => setCopiedCmdId(null), 2000);
-    toast.success("Command Copied", {
-      description: "Pasted command to clipboard.",
-      style: {
-        background: '#181818',
-        border: '1px solid #E2FF32',
-        color: '#F4F2ED',
-        fontFamily: 'JetBrains Mono, monospace'
-      }
-    });
   };
 
   useEffect(() => {
@@ -609,6 +615,85 @@ export default function App() {
     } catch (e) {}
     toast.success("Benchmark History Restored", {
       description: "Restored 4 institutional demo audit reports.",
+      style: {
+        background: '#181818',
+        border: '1px solid #E2FF32',
+        color: '#F4F2ED',
+        fontFamily: 'JetBrains Mono, monospace'
+      }
+    });
+  };
+
+  // Export current scan findings as CSV spreadsheet for institutional compliance reporting
+  const exportFindingsCSV = (report: ScanReport | null | undefined) => {
+    if (!report || !report.findings || report.findings.length === 0) {
+      toast.error("No Findings to Export", {
+        description: "The active report does not contain any findings to export.",
+        style: {
+          background: '#181818',
+          border: '1px solid #FF4D4D',
+          color: '#F4F2ED',
+          fontFamily: 'JetBrains Mono, monospace'
+        }
+      });
+      return;
+    }
+
+    const headers = [
+      "Finding ID",
+      "Severity",
+      "OWASP ASVS Standard",
+      "Title",
+      "Compliance Impact",
+      "Description",
+      "Remediation Summary",
+      "Remediation Patch / Diff",
+      "Report ID",
+      "Scan Target",
+      "Audit Date",
+      "AI Engine",
+      "Security Grade"
+    ];
+
+    const escapeCsv = (str: string | undefined | null) => {
+      if (str === undefined || str === null) return '""';
+      const clean = String(str).replace(/"/g, '""');
+      return `"${clean}"`;
+    };
+
+    const rows = report.findings.map((f, idx) => {
+      const remediation = report.remediations[idx] || SAMPLE_REMEDIATIONS[0];
+      return [
+        escapeCsv(f.id),
+        escapeCsv(f.severity),
+        escapeCsv(f.owasp_asvs_id),
+        escapeCsv(f.title),
+        escapeCsv(f.compliance_impact || "N/A"),
+        escapeCsv(f.description),
+        escapeCsv(remediation?.executive_summary || "N/A"),
+        escapeCsv(remediation?.patched_code_snippet || remediation?.unified_diff || "N/A"),
+        escapeCsv(report.id),
+        escapeCsv(report.target),
+        escapeCsv(report.dateFormatted || report.timestamp),
+        escapeCsv(report.model),
+        escapeCsv(report.grade)
+      ].join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filename = `eduguard_findings_${report.id.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("CSV Export Generated", {
+      description: `Exported ${report.findings.length} findings to ${filename} for institutional spreadsheets.`,
       style: {
         background: '#181818',
         border: '1px solid #E2FF32',
@@ -887,7 +972,7 @@ export default function App() {
                 <div 
                   onClick={() => { setActivePage('audit'); setShowDisconnectedWriteup(true); }}
                   className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 bg-[#141414] text-[#F4F2ED] rounded-full text-xs font-mono font-medium cursor-pointer border border-[#2E2E2E] hover:border-[#FF6B2B] transition-colors"
-                  title="Gemma Connection Status — Click for Connection Runbook"
+                  title="Gemma Connection Status — Click to Test Connection"
                 >
                   <span className={`w-2 h-2 rounded-full ${isGemmaConnected ? 'bg-[#E2FF32]' : 'bg-[#FF6B2B] animate-pulse'}`}></span>
                   <span>Gemma: {isGemmaConnected ? 'Online' : 'Offline'}</span>
@@ -895,17 +980,6 @@ export default function App() {
                     {isGemmaConnected ? 'Live' : 'Connect'}
                   </span>
                 </div>
-
-                {/* GitHub & Backend Alignment Modal Trigger */}
-                <button 
-                  onClick={() => setIsSyncModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 bg-[#E2FF32] text-[#141414] border border-[#141414] rounded-full text-xs font-mono font-bold hover:bg-[#ccee20] transition-colors shadow-xs cursor-pointer"
-                  title="Push to GitHub & Align Backend API"
-                >
-                  <GitBranch size={13} className="text-[#141414]" />
-                  <span className="hidden lg:inline">GitHub / Backend</span>
-                  <span className="lg:hidden">Sync</span>
-                </button>
 
                 {/* Scan History Trigger Button */}
                 <button 
@@ -963,18 +1037,6 @@ export default function App() {
                   className={`text-left text-sm py-2 px-3 rounded-lg transition-colors ${activePage === 'audit' ? 'bg-[#141414] text-white font-bold' : 'text-[#141414] hover:bg-[#141414]/5'}`}
                 >
                   Scanner & Workbench
-                </button>
-                <button 
-                  onClick={() => { setIsSyncModalOpen(true); setMobileMenuOpen(false); }} 
-                  className="text-left text-sm py-2 px-3 rounded-lg transition-colors bg-[#E2FF32]/20 border border-[#E2FF32] text-[#141414] font-medium flex items-center justify-between cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <GitBranch size={16} className="text-[#141414]" /> 
-                    <span className="font-bold">GitHub Push & Backend Sync</span>
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-[#141414] text-white text-[10px] font-mono font-bold">
-                    Git Ready
-                  </span>
                 </button>
                 <button 
                   onClick={() => { setIsHistoryOpen(true); setMobileMenuOpen(false); }} 
@@ -1326,19 +1388,31 @@ export default function App() {
               {/* Live Workbench Section */}
               <section id="workbench-anchor" className="bg-[#141414] border-t border-[#2E2E2E] px-4 sm:px-8 lg:px-16 py-16 pb-28">
                 <div className="max-w-[1600px] mx-auto">
-                  {/* Non-blocking Live Audit Indicator */}
+                  {/* Non-blocking Live Audit Indicator & Findings Progress Container */}
                   {isScanning && (
-                    <div className="flex flex-col items-center justify-center py-24 space-y-4">
-                      <div className="relative">
-                        <div className="w-16 h-16 border-4 border-[#2E2E2E] border-t-[#E2FF32] rounded-full animate-spin"></div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="w-3 h-3 rounded-full bg-[#E2FF32] animate-ping"></span>
+                    <div id="findingsContainer" className="scanning scan-progress-active space-y-6">
+                      <div className="bg-[#181818] border border-[#2E2E2E] rounded-2xl p-6 sm:p-10 relative overflow-hidden shadow-2xl">
+                        {/* Progress Fill Bar */}
+                        <div className="findings-progress-track mb-8">
+                          <div className="findings-progress-fill"></div>
                         </div>
-                      </div>
-                      <h3 className="font-display text-2xl text-white">{selectedModel} is Auditing...</h3>
-                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181818] border border-[#2E2E2E] text-xs font-mono text-neutral-400">
-                        <span className="w-2 h-2 rounded-full bg-[#E2FF32] animate-pulse"></span>
-                        Real-time non-blocking progress streaming to notification toasts
+
+                        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                          <div className="relative">
+                            <div className="w-16 h-16 border-4 border-[#2E2E2E] border-t-[#E2FF32] rounded-full animate-spin"></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="w-3 h-3 rounded-full bg-[#E2FF32] animate-ping"></span>
+                            </div>
+                          </div>
+                          <h3 className="font-display text-2xl text-white font-medium">{selectedModel} is Auditing...</h3>
+                          <p className="font-mono text-xs sm:text-sm text-neutral-400 text-center max-w-lg leading-relaxed">
+                            Deep perimeter analysis and deterministic AST traversal initiated across {selectedPacks.length} selected template packs.
+                          </p>
+                          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#141414] border border-[#2E2E2E] text-xs font-mono text-neutral-300">
+                            <span className="w-2 h-2 rounded-full bg-[#E2FF32] animate-pulse"></span>
+                            <span>Real-time non-blocking progress streaming to notification toasts</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1381,13 +1455,6 @@ export default function App() {
                           >
                             <RefreshCw size={13} className={isProbingGemma ? 'animate-spin text-[#E2FF32]' : 'text-[#E2FF32]'} />
                             <span>{isProbingGemma ? 'Probing Socket...' : 'Test Connection'}</span>
-                          </button>
-                          <button
-                            onClick={() => { setIsSyncModalOpen(true); setActiveSyncTab('backend'); }}
-                            className="px-4 py-2 rounded-full bg-[#E2FF32] text-[#141414] text-xs font-mono font-bold hover:bg-[#d6f522] transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
-                          >
-                            <Server size={13} />
-                            <span>Setup Guide</span>
                           </button>
                         </div>
                       </div>
@@ -1463,51 +1530,6 @@ export default function App() {
                           <p className="text-neutral-400 font-mono text-xs sm:text-sm leading-relaxed">
                             Fabricating simulated security grades or synthetic finding diffs creates hazardous false confidence for university sysadmins and violates compliance audit chains of custody. An audit is only produced when the target source code or endpoint is inspected and verified by an active Gemma pipeline.
                           </p>
-                        </div>
-
-                        {/* Section 3: Connection Guide */}
-                        <div className="bg-[#141414]/70 border border-[#2E2E2E] rounded-2xl p-5 sm:p-6">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Terminal className="text-[#00D1FF]" size={18} />
-                            <h4 className="font-display font-medium text-lg text-white">
-                              Quick Connection Runbook (3 Commands)
-                            </h4>
-                          </div>
-                          <p className="text-neutral-400 font-mono text-xs sm:text-sm leading-relaxed mb-4">
-                            Run these commands in your local terminal to activate the Gemma inference node and link the FastAPI gateway:
-                          </p>
-
-                          <div className="space-y-3 font-mono text-xs">
-                            <div className="bg-[#0a0a0a] p-3.5 rounded-xl border border-[#2E2E2E] flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2 overflow-x-auto text-neutral-200">
-                                <span className="text-neutral-500 select-none"># 1. Pull & run local Gemma model:</span>
-                                <span className="text-[#E2FF32]">ollama run gemma:2b</span>
-                              </div>
-                              <button onClick={() => copyCmd('ollama run gemma:2b', 'cmd1')} className="px-2.5 py-1 rounded bg-[#181818] hover:bg-[#2E2E2E] text-white border border-[#383838] transition-colors shrink-0 cursor-pointer">
-                                {copiedCmdId === 'cmd1' ? 'Copied!' : 'Copy'}
-                              </button>
-                            </div>
-
-                            <div className="bg-[#0a0a0a] p-3.5 rounded-xl border border-[#2E2E2E] flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2 overflow-x-auto text-neutral-200">
-                                <span className="text-neutral-500 select-none"># 2. Launch FastAPI scanner gateway:</span>
-                                <span className="text-[#00D1FF]">uvicorn app:app --host 0.0.0.0 --port 8000 --reload</span>
-                              </div>
-                              <button onClick={() => copyCmd('uvicorn app:app --host 0.0.0.0 --port 8000 --reload', 'cmd2')} className="px-2.5 py-1 rounded bg-[#181818] hover:bg-[#2E2E2E] text-white border border-[#383838] transition-colors shrink-0 cursor-pointer">
-                                {copiedCmdId === 'cmd2' ? 'Copied!' : 'Copy'}
-                              </button>
-                            </div>
-
-                            <div className="bg-[#0a0a0a] p-3.5 rounded-xl border border-[#2E2E2E] flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2 overflow-x-auto text-neutral-200">
-                                <span className="text-neutral-500 select-none"># 3. Verify health probe:</span>
-                                <span className="text-[#FF6B2B]">curl -s http://localhost:8000/api/gemma/status</span>
-                              </div>
-                              <button onClick={() => copyCmd('curl -s http://localhost:8000/api/gemma/status', 'cmd3')} className="px-2.5 py-1 rounded bg-[#181818] hover:bg-[#2E2E2E] text-white border border-[#383838] transition-colors shrink-0 cursor-pointer">
-                                {copiedCmdId === 'cmd3' ? 'Copied!' : 'Copy'}
-                              </button>
-                            </div>
-                          </div>
                         </div>
                       </div>
 
@@ -1659,7 +1681,7 @@ export default function App() {
                           </div>
 
                           {/* Actions & Dev Patch Mode Toggle */}
-                          <div className="flex flex-wrap items-center gap-4">
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 print-hidden">
                             <div className="inline-flex p-1 bg-[#0a0a0a] border border-[#2E2E2E] rounded-full text-xs font-mono">
                               <button 
                                 onClick={() => setIsDevDiffMode(false)}
@@ -1674,19 +1696,61 @@ export default function App() {
                                 Dev Patch Diff
                               </button>
                             </div>
-                            <button 
-                              onClick={() => window.print()}
-                              className="px-5 py-2 border border-[#383838] rounded-full text-xs sm:text-sm font-medium hover:bg-[#2E2E2E] hover:text-white transition-colors flex items-center gap-2 cursor-pointer"
-                            >
-                              <Printer size={15} />
-                              Export Client PDF
-                            </button>
+
+                            {/* Institutional Export Feature: CSV & PDF */}
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => exportFindingsCSV(activeReport)}
+                                className="px-3.5 sm:px-4 py-2 border border-[#383838] bg-[#141414] hover:border-[#E2FF32] hover:text-[#E2FF32] text-white rounded-full text-xs sm:text-sm font-mono font-medium transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm group"
+                                title="Export current scan findings as a CSV file"
+                              >
+                                <Download size={14} className="text-[#E2FF32] group-hover:scale-110 transition-transform" />
+                                <span>Export CSV</span>
+                              </button>
+                              <button 
+                                onClick={() => window.print()}
+                                className="px-3.5 sm:px-4 py-2 border border-[#383838] bg-[#141414] hover:bg-[#2E2E2E] hover:text-white text-white rounded-full text-xs sm:text-sm font-mono font-medium transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm group"
+                                title="Export current institutional audit report as PDF"
+                              >
+                                <Printer size={14} className="text-[#FF6B2B] group-hover:scale-110 transition-transform" />
+                                <span>Export PDF</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Bento Findings Cards */}
-                      <div className="space-y-6">
+                      {/* Institutional Print Cover Header (Visible only in print / exported PDF) */}
+                      <div className="hidden print:block mb-8 p-6 bg-white border border-gray-300 rounded-xl">
+                        <div className="flex justify-between items-start border-b border-gray-300 pb-4">
+                          <div>
+                            <h1 className="text-2xl font-bold tracking-tight text-gray-900 uppercase font-display">EduGuard — Institutional Security & Compliance Audit</h1>
+                            <p className="text-xs font-mono text-gray-600 mt-1">
+                              Deterministic Security Baseline Audit · OWASP ASVS v4.0 & FERPA §99.31 Compliance
+                            </p>
+                          </div>
+                          <div className="text-right font-mono">
+                            <div className="text-2xl font-bold text-gray-900">Grade: {activeReport.grade}</div>
+                            <div className="text-xs text-gray-600 font-semibold">{activeReport.findings.length} Findings Identified</div>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-4 gap-4 text-xs font-mono text-gray-800">
+                          <div><span className="text-gray-500 font-normal">Target:</span> <span className="font-bold">{activeReport.target}</span></div>
+                          <div><span className="text-gray-500 font-normal">Audit ID:</span> <span className="font-bold">{activeReport.id}</span></div>
+                          <div><span className="text-gray-500 font-normal">Date:</span> <span className="font-bold">{activeReport.dateFormatted || activeReport.timestamp}</span></div>
+                          <div><span className="text-gray-500 font-normal">Engine:</span> <span className="font-bold">{activeReport.model}</span></div>
+                        </div>
+                      </div>
+
+                      {/* Bento Findings Cards with Framer Motion Staggered Entrance */}
+                      <motion.div 
+                        id="findingsContainer" 
+                        key={activeReport.id}
+                        variants={findingsContainerVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="space-y-6"
+                      >
                         {activeReport.findings.map((finding, idx) => {
                           const remediation = activeReport.remediations[idx] || SAMPLE_REMEDIATIONS[0];
                           const severityColor = finding.severity === 'CRITICAL' ? 'bg-[#FF4D4D] text-white' : (finding.severity === 'HIGH' ? 'bg-[#FF6B2B] text-white' : 'bg-[#E2FF32] text-[#141414]');
@@ -1694,7 +1758,11 @@ export default function App() {
                           const isCopied = copiedIndex === idx;
 
                           return (
-                            <div key={finding.id} className="finding-card bg-[#181818] border border-[#2E2E2E] rounded-2xl overflow-hidden flex flex-col lg:flex-row">
+                            <motion.div 
+                              key={finding.id} 
+                              variants={findingCardVariants}
+                              className="finding-card bg-[#181818] border border-[#2E2E2E] rounded-2xl overflow-hidden flex flex-col lg:flex-row shadow-lg transition-colors hover:border-neutral-700"
+                            >
                               {/* Left Info Panel */}
                               <div className="p-4 sm:p-6 lg:w-5/12 border-b lg:border-b-0 lg:border-r border-[#2E2E2E] flex flex-col justify-between">
                                 <div>
@@ -1747,10 +1815,10 @@ export default function App() {
                                   </pre>
                                 </div>
                               </div>
-                            </div>
+                            </motion.div>
                           );
                         })}
-                      </div>
+                      </motion.div>
                     </div>
                   )}
 
@@ -2232,6 +2300,14 @@ export default function App() {
                       )}
 
                       <button 
+                        onClick={(e) => { e.stopPropagation(); exportFindingsCSV(report); }}
+                        className="p-1 rounded-md text-neutral-400 hover:text-[#E2FF32] hover:bg-[#141414] transition-colors cursor-pointer"
+                        title="Export this report's findings as CSV"
+                      >
+                        <Download size={13} />
+                      </button>
+
+                      <button 
                         onClick={(e) => deleteScanReport(report.id, e)}
                         className="p-1 rounded-md text-neutral-500 hover:text-[#FF4D4D] hover:bg-[#141414] transition-colors cursor-pointer"
                         title="Delete this report from history"
@@ -2297,370 +2373,6 @@ export default function App() {
           </div>
         </div>
       </aside>
-
-      {/* GitHub Push & Backend Alignment Center Modal */}
-      {isSyncModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
-          onClick={() => setIsSyncModalOpen(false)}
-        >
-          <div 
-            className="bg-[#141414] border border-[#2E2E2E] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="p-5 sm:p-6 border-b border-[#2E2E2E] flex items-start justify-between bg-[#181818]">
-              <div>
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <span className="p-1.5 rounded-lg bg-[#E2FF32] text-[#141414]">
-                    <GitBranch size={18} />
-                  </span>
-                  <h3 className="text-lg font-bold text-white tracking-tight">
-                    GitHub Push & Backend Alignment Center
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#E2FF32]/20 border border-[#E2FF32]/40 text-[#E2FF32] text-xs font-mono font-medium">
-                    Git Initialized · Ready
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-neutral-400">
-                  Export repository files to GitHub or align with your local/cloud FastAPI Python audit engine.
-                </p>
-              </div>
-              <button 
-                onClick={() => setIsSyncModalOpen(false)}
-                className="p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-[#252525] transition-colors cursor-pointer"
-                aria-label="Close sync modal"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Modal Tabs */}
-            <div className="flex border-b border-[#2E2E2E] bg-[#161616] px-5 sm:px-6 gap-2">
-              <button
-                onClick={() => setActiveSyncTab('github')}
-                className={`py-3 px-3 text-xs sm:text-sm font-mono flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
-                  activeSyncTab === 'github'
-                    ? 'border-[#E2FF32] text-[#E2FF32] font-bold'
-                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
-                }`}
-              >
-                <GitBranch size={14} />
-                <span>1. Push to GitHub</span>
-              </button>
-              <button
-                onClick={() => setActiveSyncTab('backend')}
-                className={`py-3 px-3 text-xs sm:text-sm font-mono flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
-                  activeSyncTab === 'backend'
-                    ? 'border-[#E2FF32] text-[#E2FF32] font-bold'
-                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
-                }`}
-              >
-                <Server size={14} />
-                <span>2. Backend Contract & API</span>
-              </button>
-              <button
-                onClick={() => setActiveSyncTab('files')}
-                className={`py-3 px-3 text-xs sm:text-sm font-mono flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
-                  activeSyncTab === 'files'
-                    ? 'border-[#E2FF32] text-[#E2FF32] font-bold'
-                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
-                }`}
-              >
-                <FileCode size={14} />
-                <span>3. Project Files & Download</span>
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-neutral-300">
-              {activeSyncTab === 'github' && (
-                <div className="space-y-5">
-                  <div className="p-4 bg-[#1A1A1A] border border-[#2E2E2E] rounded-xl flex items-start gap-3">
-                    <CheckCircle2 size={18} className="text-[#E2FF32] mt-0.5 shrink-0" />
-                    <div className="text-xs sm:text-sm space-y-1">
-                      <p className="font-bold text-white">Local Git Repository Staged & Committed</p>
-                      <p className="text-neutral-400 leading-relaxed">
-                        The repository is initialized on branch <code className="text-[#E2FF32]">main</code> with all 25 application files committed. You only need to link your remote GitHub repository and push.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400 mb-2">
-                      Step-by-step Push Instructions
-                    </h4>
-                    <ol className="space-y-4 text-xs sm:text-sm">
-                      <li className="flex gap-3">
-                        <span className="w-6 h-6 rounded-full bg-[#252525] border border-[#383838] flex items-center justify-center font-mono font-bold text-xs text-[#E2FF32] shrink-0">
-                          1
-                        </span>
-                        <div>
-                          <p className="font-semibold text-white">Create a repository on GitHub</p>
-                          <p className="text-neutral-400 text-xs">
-                            Go to <span className="text-[#E2FF32]">github.com/new</span> and create an empty repository (do NOT initialize with README or license).
-                          </p>
-                        </div>
-                      </li>
-
-                      <li className="flex gap-3">
-                        <span className="w-6 h-6 rounded-full bg-[#252525] border border-[#383838] flex items-center justify-center font-mono font-bold text-xs text-[#E2FF32] shrink-0">
-                          2
-                        </span>
-                        <div className="w-full">
-                          <p className="font-semibold text-white mb-1.5">Add remote & push in terminal</p>
-                          <div className="relative group">
-                            <pre className="p-3.5 bg-[#0D0D0D] border border-[#2E2E2E] rounded-xl text-xs font-mono text-[#F4F2ED] overflow-x-auto leading-relaxed">
-{`# 1. Connect your GitHub repository as origin
-git remote add origin https://github.com/<YOUR-USERNAME>/<YOUR-REPO-NAME>.git
-
-# 2. Ensure default branch is main
-git branch -M main
-
-# 3. Push all commits & branches
-git push -u origin main`}
-                            </pre>
-                            <button
-                              onClick={() => {
-                                const cmd = `git remote add origin https://github.com/<YOUR-USERNAME>/<YOUR-REPO-NAME>.git\ngit branch -M main\ngit push -u origin main`;
-                                navigator.clipboard.writeText(cmd);
-                                setCopiedSyncCmd('git');
-                                toast.success("Git Commands Copied", { description: "Paste directly into your terminal." });
-                                setTimeout(() => setCopiedSyncCmd(null), 2500);
-                              }}
-                              className="absolute top-2.5 right-2.5 px-3 py-1.5 bg-[#252525] hover:bg-[#333] border border-[#3E3E3E] rounded-lg text-xs font-mono text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-                            >
-                              {copiedSyncCmd === 'git' ? <Check size={12} className="text-[#E2FF32]" /> : <Copy size={12} />}
-                              <span>{copiedSyncCmd === 'git' ? 'Copied' : 'Copy Commands'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-
-                      <li className="flex gap-3">
-                        <span className="w-6 h-6 rounded-full bg-[#252525] border border-[#383838] flex items-center justify-center font-mono font-bold text-xs text-[#E2FF32] shrink-0">
-                          3
-                        </span>
-                        <div>
-                          <p className="font-semibold text-white">Using GitHub CLI (Alternative)</p>
-                          <div className="p-2.5 bg-[#0D0D0D] border border-[#2E2E2E] rounded-lg text-xs font-mono text-neutral-300 mt-1">
-                            <code>gh repo create eduguard-security-auditor --public --source=. --push</code>
-                          </div>
-                        </div>
-                      </li>
-                    </ol>
-                  </div>
-                </div>
-              )}
-
-              {activeSyncTab === 'backend' && (
-                <div className="space-y-5 text-xs sm:text-sm">
-                  <div className="p-4 bg-[#1A1A1A] border border-[#2E2E2E] rounded-xl">
-                    <h4 className="font-bold text-white mb-1 flex items-center gap-2">
-                      <Server size={15} className="text-[#00D1FF]" />
-                      FastAPI Backend Alignment (<code className="text-[#E2FF32]">app.py</code>)
-                    </h4>
-                    <p className="text-neutral-400 text-xs leading-relaxed">
-                      EduGuard's React interface dynamically connects to <code className="text-white font-mono">POST /api/scan</code>. When your Python backend runs on port 8000, Vite automatically proxies all requests transparently.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h5 className="font-mono text-xs uppercase tracking-wider text-neutral-400 font-bold mb-2">
-                      1. Endpoint Contract
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
-                      <div className="p-3 bg-[#0D0D0D] border border-[#2E2E2E] rounded-xl space-y-2">
-                        <div className="flex items-center justify-between text-neutral-400 border-b border-[#222] pb-1.5">
-                          <span className="text-[#E2FF32] font-bold">Request Payload</span>
-                          <span>POST /api/scan</span>
-                        </div>
-                        <pre className="text-neutral-300 overflow-x-auto text-[11px]">
-{`{
-  "target": "./demo_target",
-  "scan_mode": "hybrid",
-  "selected_packs": [
-    "pack_1_dns",
-    "pack_3_configs",
-    "pack_5_rbac"
-  ],
-  "model_name": "gemma4:e4b"
-}`}
-                        </pre>
-                      </div>
-
-                      <div className="p-3 bg-[#0D0D0D] border border-[#2E2E2E] rounded-xl space-y-2">
-                        <div className="flex items-center justify-between text-neutral-400 border-b border-[#222] pb-1.5">
-                          <span className="text-[#00D1FF] font-bold">Response Contract</span>
-                          <span>AuditReport</span>
-                        </div>
-                        <pre className="text-neutral-300 overflow-x-auto text-[11px]">
-{`{
-  "target": "./demo_target",
-  "security_grade": "C",
-  "total_findings": 2,
-  "findings": [ ... ],
-  "remediations": [ ... ]
-}`}
-                        </pre>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="font-mono text-xs uppercase tracking-wider text-neutral-400 font-bold mb-2">
-                      2. Running Your Python Backend
-                    </h5>
-                    <div className="relative">
-                      <pre className="p-3.5 bg-[#0D0D0D] border border-[#2E2E2E] rounded-xl text-xs font-mono text-[#F4F2ED] overflow-x-auto leading-relaxed">
-{`# 1. Install FastAPI & dependencies
-pip install fastapi uvicorn pydantic pyyaml sentry-sdk
-
-# 2. Run local FastAPI server with hot-reload
-uvicorn app:app --host 0.0.0.0 --port 8000 --reload
-
-# 3. Test API endpoint with cURL
-curl -X POST http://localhost:8000/api/scan \\
-  -H "Content-Type: application/json" \\
-  -d '{"target":"./demo_target","scan_mode":"hybrid","selected_packs":["pack_1_dns"],"model_name":"gemma4:e4b"}'`}
-                      </pre>
-                      <button
-                        onClick={() => {
-                          const cmd = `pip install fastapi uvicorn pydantic pyyaml sentry-sdk\nuvicorn app:app --host 0.0.0.0 --port 8000 --reload`;
-                          navigator.clipboard.writeText(cmd);
-                          setCopiedSyncCmd('backend');
-                          toast.success("Backend Command Copied");
-                          setTimeout(() => setCopiedSyncCmd(null), 2500);
-                        }}
-                        className="absolute top-2.5 right-2.5 px-3 py-1.5 bg-[#252525] hover:bg-[#333] border border-[#3E3E3E] rounded-lg text-xs font-mono text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        {copiedSyncCmd === 'backend' ? <Check size={12} className="text-[#E2FF32]" /> : <Copy size={12} />}
-                        <span>{copiedSyncCmd === 'backend' ? 'Copied' : 'Copy'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeSyncTab === 'files' && (
-                <div className="space-y-5 text-xs sm:text-sm">
-                  <div className="p-4 bg-[#1A1A1A] border border-[#2E2E2E] rounded-xl">
-                    <h4 className="font-bold text-white mb-1 flex items-center gap-2">
-                      <FileCode size={15} className="text-[#E2FF32]" />
-                      Repository Structure & Access
-                    </h4>
-                    <p className="text-neutral-400 text-xs leading-relaxed">
-                      All source files are synchronized between the React SPA and the FastAPI backend. You can download or inspect any component.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3.5 bg-[#181818] border border-[#2E2E2E] rounded-xl">
-                      <div className="flex items-center gap-2 font-mono font-bold text-white mb-1">
-                        <Code2 size={14} className="text-[#E2FF32]" />
-                        <span>Frontend: React 19 + Vite</span>
-                      </div>
-                      <p className="text-neutral-400 text-xs">
-                        Located at <code className="text-white">src/App.tsx</code>. Handles real-time Sonner toast progress, scan history drawer, template selection, and interactive diff visualizer.
-                      </p>
-                    </div>
-
-                    <div className="p-3.5 bg-[#181818] border border-[#2E2E2E] rounded-xl">
-                      <div className="flex items-center gap-2 font-mono font-bold text-white mb-1">
-                        <Server size={14} className="text-[#00D1FF]" />
-                        <span>Backend: FastAPI Server</span>
-                      </div>
-                      <p className="text-neutral-400 text-xs">
-                        Located at <code className="text-white">app.py</code>. Exposes <code className="text-white">/api/scan</code> and <code className="text-white">/api/export</code> with local Gemma orchestration.
-                      </p>
-                    </div>
-
-                    <div className="p-3.5 bg-[#181818] border border-[#2E2E2E] rounded-xl">
-                      <div className="flex items-center gap-2 font-mono font-bold text-white mb-1">
-                        <Layers size={14} className="text-[#FF6B2B]" />
-                        <span>SSR Jinja2 Templates</span>
-                      </div>
-                      <p className="text-neutral-400 text-xs">
-                        Located in <code className="text-white">ui/templates/</code> and <code className="text-white">ui/static/</code> for standalone server-side rendered deployments.
-                      </p>
-                    </div>
-
-                    <div className="p-3.5 bg-[#181818] border border-[#2E2E2E] rounded-xl">
-                      <div className="flex items-center gap-2 font-mono font-bold text-white mb-1">
-                        <Terminal size={14} className="text-[#E2FF32]" />
-                        <span>Vite Proxy Pipeline</span>
-                      </div>
-                      <p className="text-neutral-400 text-xs">
-                        Located in <code className="text-white">vite.config.ts</code>. Automatically forwards any frontend call on <code className="text-white">/api/*</code> to FastAPI on port 8000.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-[#181818] border border-[#2E2E2E] rounded-xl flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-white">Direct Download from Google AI Studio</p>
-                      <p className="text-neutral-400 text-xs">
-                        Use the <strong>Export</strong> or <strong>Download ZIP</strong> button in the AI Studio top bar to download the entire codebase as a .zip file.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const projectSummary = {
-                          project: "EduGuard Security Auditor",
-                          branch: "main",
-                          commit: "70b6e96",
-                          files: [
-                            "app.py",
-                            "vite.config.ts",
-                            "package.json",
-                            "src/App.tsx",
-                            "src/index.css",
-                            "ui/templates/audit.html",
-                            "ui/static/js/audit.js"
-                          ],
-                          api_contract: {
-                            scan_endpoint: "POST /api/scan",
-                            export_endpoint: "POST /api/export"
-                          },
-                          scan_history_archive: scanHistory
-                        };
-                        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectSummary, null, 2));
-                        const dl = document.createElement('a');
-                        dl.setAttribute("href", dataStr);
-                        dl.setAttribute("download", `eduguard_project_sync_${new Date().toISOString().slice(0,10)}.json`);
-                        document.body.appendChild(dl);
-                        dl.click();
-                        dl.remove();
-                        toast.success("Project Bundle JSON Downloaded", {
-                          description: "Exported project architecture & scan history archive."
-                        });
-                      }}
-                      className="px-4 py-2 bg-[#E2FF32] text-[#141414] font-bold font-mono text-xs rounded-xl hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                      <Download size={14} />
-                      Export Project JSON
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 sm:p-5 border-t border-[#2E2E2E] bg-[#161616] flex items-center justify-between text-xs font-mono">
-              <span className="text-neutral-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#E2FF32] animate-pulse"></span>
-                Commit: <code className="text-white">70b6e96 (main)</code>
-              </span>
-              <button
-                onClick={() => setIsSyncModalOpen(false)}
-                className="px-5 py-2 bg-[#252525] hover:bg-[#333] border border-[#3E3E3E] text-white rounded-xl transition-colors cursor-pointer font-bold"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Sonner Toast Notification System (Non-blocking real-time stages) */}
       <Toaster 

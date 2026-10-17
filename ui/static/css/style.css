@@ -282,17 +282,85 @@ body, html {
     border-color: var(--color-crimson);
 }
 
-/* Print Optimization */
-@media print {
-    #toast-container { display: none !important; }
-    #global-frame { display: none !important; }
-    #viewport-content { padding: 0 !important; }
-    #scroll-container { border-radius: 0 !important; background: white !important; }
-    .finding-card {
-        break-inside: avoid;
-        page-break-inside: avoid;
-        border: 1px solid #ccc !important;
-        background-color: white !important;
-        color: black !important;
+/* Findings Container Progress Fill Animation (#findingsContainer) */
+@keyframes findingsProgressSweep {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes progressFillBar {
+    0% { width: 4%; }
+    25% { width: 32%; }
+    60% { width: 68%; }
+    85% { width: 90%; }
+    100% { width: 100%; }
+}
+
+@keyframes findingsGlowPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 1px rgba(226, 255, 50, 0.15), 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 1px rgba(226, 255, 50, 0.4), 0 0 25px rgba(226, 255, 50, 0.12);
     }
 }
+
+#findingsContainer {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#findingsContainer.scanning,
+#findingsContainer[data-scanning="true"],
+#findingsContainer.scan-progress-active {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    animation: findingsGlowPulse 2s ease-in-out infinite;
+}
+
+#findingsContainer.scanning::before,
+#findingsContainer[data-scanning="true"]::before,
+#findingsContainer.scan-progress-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #E2FF32 0%, #FF6B2B 50%, #E2FF32 100%);
+    background-size: 200% 100%;
+    animation: findingsProgressSweep 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    box-shadow: 0 0 14px rgba(226, 255, 50, 0.6);
+    z-index: 30;
+}
+
+#findingsContainer.scanning::after,
+#findingsContainer[data-scanning="true"]::after,
+#findingsContainer.scan-progress-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(226, 255, 50, 0.03) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.findings-progress-track {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.findings-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #E2FF32, #FF6B2B, #E2FF32);
+    background-size: 200% 100%;
+    border-radius: 9999px;
+    animation: progressFillBar 2.2s ease-out forwards, findingsProgressSweep 1.6s linear infinite;
+    box-shadow: 0 0 10px rgba(226, 255, 50, 0.5);
+}
+
