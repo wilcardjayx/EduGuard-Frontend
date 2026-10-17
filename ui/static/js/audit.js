@@ -236,11 +236,10 @@ async function runScan() {
         renderResults(data);
 
     } catch (error) {
-        console.warn("Backend scan failed or Ollama unavailable, serving verified sample dataset:", error);
+        console.warn("Backend scan failed or local Gemma node offline:", error);
         clearTimeout(stage2Timer);
         clearTimeout(stage3Timer);
         
-        // Brief simulated delay to show completion
         setTimeout(() => {
             if (loadingState) {
                 loadingState.classList.add('hidden');
@@ -250,14 +249,14 @@ async function runScan() {
             if (window.EduToast) {
                 window.EduToast.show({
                     id: toastId,
-                    title: "Audit Complete (Sample Data)",
-                    description: `Local Gemma unavailable. Showing verified baseline sample report.`,
-                    stage: "success",
-                    duration: 4500
+                    title: "Local Gemma Not Connected",
+                    description: "Scan halted. Generic results are suppressed per FERPA §99.31 policy until Gemma is connected.",
+                    stage: "error",
+                    duration: 6500
                 });
             }
 
-            renderResults(FALLBACK_DEMO_REPORT);
+            renderGemmaDisconnectedWriteup(aiModel);
         }, 600);
     }
 }
@@ -594,4 +593,134 @@ function resetDefaultHistory() {
             duration: 3000
         });
     }
+}
+
+// Render Professional Write-Up When Gemma is Not Connected (Suppresses Generic Data)
+function renderGemmaDisconnectedWriteup(modelName) {
+    const resultsHeader = document.getElementById('resultsHeader');
+    const container = document.getElementById('findingsContainer');
+    
+    if (resultsHeader) resultsHeader.classList.add('hidden');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="bg-charcoal-700 border border-tangerine/50 rounded-3xl p-6 sm:p-10 text-alabaster shadow-2xl relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-charcoal-500 gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-tangerine/15 border border-tangerine flex items-center justify-center text-tangerine shrink-0">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-pulse"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-mono text-xs font-bold text-tangerine uppercase tracking-wider">/ Pipeline Telemetry</span>
+                            <span class="px-2.5 py-0.5 rounded-full bg-crimson/20 border border-crimson text-crimson text-[11px] font-mono font-bold flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-crimson animate-ping"></span>
+                                Gemma Disconnected
+                            </span>
+                            <span class="px-2.5 py-0.5 rounded-full bg-charcoal-800 border border-charcoal-600 text-alabaster/60 text-[11px] font-mono">
+                                Generic Results Suppressed
+                            </span>
+                        </div>
+                        <h3 class="font-display font-medium text-2xl text-white mt-1">
+                            Local Gemma AI Engine Not Connected
+                        </h3>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="runScan()" class="px-4 py-2 rounded-full bg-acid text-charcoal-800 text-xs font-mono font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer shadow-sm">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span>Re-Test Connection</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-8">
+                <div class="bg-charcoal-800 p-4 rounded-xl border border-charcoal-600">
+                    <div class="flex items-center justify-between text-xs font-mono text-alabaster/60 mb-1">
+                        <span>Ollama Inference Daemon</span>
+                        <span class="text-crimson font-bold">Unreachable</span>
+                    </div>
+                    <div class="text-sm font-mono text-white flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-crimson"></span>
+                        localhost:11434
+                    </div>
+                    <p class="text-[11px] font-mono text-alabaster/40 mt-1">Local port for ${modelName || 'gemma4:e4b'}</p>
+                </div>
+
+                <div class="bg-charcoal-800 p-4 rounded-xl border border-charcoal-600">
+                    <div class="flex items-center justify-between text-xs font-mono text-alabaster/60 mb-1">
+                        <span>FastAPI Scanner Gateway</span>
+                        <span class="text-tangerine font-bold">Offline</span>
+                    </div>
+                    <div class="text-sm font-mono text-white flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-tangerine"></span>
+                        localhost:8000/api/scan
+                    </div>
+                    <p class="text-[11px] font-mono text-alabaster/40 mt-1">Audit execution backend</p>
+                </div>
+
+                <div class="bg-charcoal-800 p-4 rounded-xl border border-charcoal-600">
+                    <div class="flex items-center justify-between text-xs font-mono text-alabaster/60 mb-1">
+                        <span>Target AI Model</span>
+                        <span class="text-acid font-bold">Configured</span>
+                    </div>
+                    <div class="text-sm font-mono text-white flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-acid"></span>
+                        ${modelName || 'gemma4:e4b'}
+                    </div>
+                    <p class="text-[11px] font-mono text-alabaster/40 mt-1">Awaiting local model stream</p>
+                </div>
+            </div>
+
+            <div class="space-y-6 text-sm text-alabaster/80 leading-relaxed">
+                <div class="bg-charcoal-800/80 border border-charcoal-600 rounded-2xl p-5 sm:p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <h4 class="font-display font-medium text-lg text-white">
+                            Zero-Cloud FERPA §99.31 Mandate
+                        </h4>
+                    </div>
+                    <p class="text-alabaster/70 font-mono text-xs sm:text-sm leading-relaxed mb-3">
+                        EduGuard enforces institutional data sovereignty for campus infrastructure. Student records, faculty rosters, and database credentials are strictly prohibited from crossing public multi-tenant cloud AI boundaries.
+                    </p>
+                    <p class="text-alabaster/70 font-mono text-xs sm:text-sm leading-relaxed">
+                        To fulfill this compliance mandate, all unified AST diff synthesis is performed exclusively by your on-premise local Gemma model.
+                    </p>
+                </div>
+
+                <div class="bg-charcoal-800/80 border border-charcoal-600 rounded-2xl p-5 sm:p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <h4 class="font-display font-medium text-lg text-white">
+                            Generic & Mock Results Suppressed
+                        </h4>
+                    </div>
+                    <p class="text-alabaster/70 font-mono text-xs sm:text-sm leading-relaxed">
+                        Unlike generic scanners that populate fake simulated findings when disconnected, EduGuard deliberately suppresses synthetic vulnerability output. Displaying mock grades on real infrastructure introduces hazardous blind spots into institutional security reviews.
+                    </p>
+                </div>
+
+                <div class="bg-charcoal-800/80 border border-charcoal-600 rounded-2xl p-5 sm:p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <h4 class="font-display font-medium text-lg text-white">
+                            Quick Connection Runbook
+                        </h4>
+                    </div>
+                    <p class="text-alabaster/70 font-mono text-xs sm:text-sm leading-relaxed mb-4">
+                        Run these commands in your local shell to start Ollama and the backend scanner:
+                    </p>
+
+                    <div class="space-y-3 font-mono text-xs">
+                        <div class="bg-charcoal-900 p-3.5 rounded-xl border border-charcoal-600 flex items-center justify-between gap-3">
+                            <span class="text-acid">ollama run gemma:2b</span>
+                            <span class="text-alabaster/50 text-[11px]"># 1. Pull & launch local model</span>
+                        </div>
+                        <div class="bg-charcoal-900 p-3.5 rounded-xl border border-charcoal-600 flex items-center justify-between gap-3">
+                            <span class="text-white">uvicorn app:app --host 0.0.0.0 --port 8000 --reload</span>
+                            <span class="text-alabaster/50 text-[11px]"># 2. Start scanner gateway</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }

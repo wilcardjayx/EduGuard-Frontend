@@ -33,7 +33,10 @@ import {
   GitBranch,
   Download,
   Server,
-  Code2
+  Code2,
+  RefreshCw,
+  WifiOff,
+  Activity
 } from 'lucide-react';
 
 interface CheckItem {
@@ -457,6 +460,74 @@ export default function App() {
   const [activeSyncTab, setActiveSyncTab] = useState<'github' | 'backend' | 'files'>('github');
   const [copiedSyncCmd, setCopiedSyncCmd] = useState<string | null>(null);
 
+  // Gemma Engine Connectivity State (Suppresses generic output if not connected)
+  const [isGemmaConnected, setIsGemmaConnected] = useState<boolean>(false);
+  const [isProbingGemma, setIsProbingGemma] = useState<boolean>(false);
+  const [showDisconnectedWriteup, setShowDisconnectedWriteup] = useState<boolean>(true);
+  const [copiedCmdId, setCopiedCmdId] = useState<string | null>(null);
+
+  // Check Gemma live probe
+  const checkGemmaLiveStatus = async (silent = false) => {
+    setIsProbingGemma(true);
+    try {
+      const res = await fetch('/api/gemma/status', { method: 'GET' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.connected) {
+          setIsGemmaConnected(true);
+          setShowDisconnectedWriteup(false);
+          if (!silent) {
+            toast.success("Gemma Engine Connected", {
+              description: `Active ${data.runtime || 'Ollama'} runtime detected on port ${data.port || 11434}.`,
+              style: {
+                background: '#181818',
+                border: '1px solid #E2FF32',
+                color: '#F4F2ED',
+                fontFamily: 'JetBrains Mono, monospace'
+              }
+            });
+          }
+          setIsProbingGemma(false);
+          return true;
+        }
+      }
+    } catch (err) {}
+
+    setIsGemmaConnected(false);
+    if (!silent) {
+      toast.error("Gemma Engine Offline", {
+        description: "Local daemon at localhost:11434 / localhost:8000 is unreachable. Run 'ollama run gemma:2b'.",
+        style: {
+          background: '#181818',
+          border: '1px solid #FF6B2B',
+          color: '#F4F2ED',
+          fontFamily: 'JetBrains Mono, monospace'
+        }
+      });
+    }
+    setIsProbingGemma(false);
+    return false;
+  };
+
+  const copyCmd = (cmd: string, id: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedCmdId(id);
+    setTimeout(() => setCopiedCmdId(null), 2000);
+    toast.success("Command Copied", {
+      description: "Pasted command to clipboard.",
+      style: {
+        background: '#181818',
+        border: '1px solid #E2FF32',
+        color: '#F4F2ED',
+        fontFamily: 'JetBrains Mono, monospace'
+      }
+    });
+  };
+
+  useEffect(() => {
+    checkGemmaLiveStatus(true);
+  }, []);
+
   // Currently active scan report
   const activeReport = scanHistory.find(s => s.id === selectedScanId) || scanHistory[0] || DEFAULT_SCAN_HISTORY[0];
 
@@ -484,10 +555,11 @@ export default function App() {
   const selectScanReport = (reportId: string) => {
     setSelectedScanId(reportId);
     setHasScanned(true);
+    setShowDisconnectedWriteup(false);
     const rep = scanHistory.find(s => s.id === reportId);
     if (rep) {
       toast.info(`Switched to Report: ${rep.id}`, {
-        description: `${rep.name} (Grade ${rep.grade}) · ${rep.findings.length} findings loaded`,
+        description: `${rep.name} (${rep.isSampleData ? 'Archived Baseline' : 'Live Verified'} · Grade ${rep.grade}) · ${rep.findings.length} findings`,
         style: {
           background: '#181818',
           border: '1px solid #E2FF32',
@@ -655,85 +727,84 @@ export default function App() {
     const elapsed = Date.now() - startTime;
     const remainingDelay = Math.max(0, 2700 - elapsed);
 
-    // Final Stage Toast: Audit Completion & History Record Generation
+    // Final Stage Toast: Audit Completion & Verification
     setTimeout(() => {
       clearTimeout(stage2Timer);
       clearTimeout(stage3Timer);
       setIsScanning(false);
       setHasScanned(true);
 
-      const newScanId = `SCAN-${Math.floor(1000 + Math.random() * 9000)}`;
-      const now = new Date();
-      const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const formattedDate = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      if (isConnectedBackend && liveResult && liveResult.findings && liveResult.findings.length > 0) {
+        // Gemma IS connected: Generate authentic audit scorecard
+        setIsGemmaConnected(true);
+        setShowDisconnectedWriteup(false);
 
-      // Calculate realistic findings & grade depending on backend response or selected packs
-      let findingsToUse = [...SAMPLE_FINDINGS];
-      let remediationsToUse = [...SAMPLE_REMEDIATIONS];
-      let grade: 'A' | 'A-' | 'B+' | 'B' | 'C' | 'D' | 'F' = 'C';
-      let gradeColor = '#FF6B2B';
-      let isSample = true;
+        const newScanId = `SCAN-${Math.floor(1000 + Math.random() * 9000)}`;
+        const now = new Date();
+        const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const formattedDate = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 
-      if (isConnectedBackend && liveResult) {
-        isSample = false;
-        findingsToUse = liveResult.findings && liveResult.findings.length > 0 ? liveResult.findings : SAMPLE_FINDINGS;
-        remediationsToUse = liveResult.remediations && liveResult.remediations.length > 0 ? liveResult.remediations : SAMPLE_REMEDIATIONS;
-        grade = (liveResult.security_grade as any) || 'C';
-        gradeColor = (grade === 'A' || grade === 'A-') ? '#E2FF32' : (grade === 'B' || grade === 'B+') ? '#00D1FF' : '#FF6B2B';
+        const findingsToUse = liveResult.findings;
+        const remediationsToUse = liveResult.remediations || [];
+        const grade = (liveResult.security_grade as any) || 'B';
+        const gradeColor = (grade === 'A' || grade === 'A-') ? '#E2FF32' : (grade === 'B' || grade === 'B+') ? '#00D1FF' : '#FF6B2B';
+
+        const newReport: ScanReport = {
+          id: newScanId,
+          name: `Live Audit: ${scanTarget || './demo_target'}`,
+          timestamp: `Today, ${formattedTime}`,
+          dateFormatted: `${formattedDate} · ${formattedTime}`,
+          isoDate: now.toISOString(),
+          target: scanTarget || './demo_target',
+          scanMode: scanMode,
+          model: selectedModel,
+          selectedPacks: [...selectedPacks],
+          grade,
+          gradeColor,
+          isSampleData: false,
+          findings: findingsToUse,
+          remediations: remediationsToUse,
+          executiveNotes: `Live audit of ${scanTarget || './demo_target'} executed via FastAPI backend & local ${selectedModel}. AST inspection generated ${findingsToUse.length} remediation diffs.`
+        };
+
+        setScanHistory(prev => {
+          const updated = [newReport, ...prev];
+          try {
+            localStorage.setItem('eduguard_scan_history', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+        setSelectedScanId(newScanId);
+
+        toast.success("Security Audit Complete", {
+          id: auditToastId,
+          description: `Live Gemma verified ${findingsToUse.length} findings with ${selectedModel}. Scorecard Grade ${grade}.`,
+          duration: 4500,
+          style: {
+            background: '#181818',
+            border: '1px solid #E2FF32',
+            color: '#F4F2ED',
+            fontFamily: 'JetBrains Mono, monospace'
+          }
+        });
       } else {
-        if (!selectedPacks.includes('pack_5_rbac') && !selectedPacks.includes('pack_3_configs')) {
-          findingsToUse = [SAMPLE_FINDINGS[0]];
-          remediationsToUse = [SAMPLE_REMEDIATIONS[0]];
-          grade = 'B';
-          gradeColor = '#FF6B2B';
-        } else if (selectedPacks.length >= 5) {
-          grade = 'C';
-          gradeColor = '#FF6B2B';
-        }
+        // Gemma is NOT connected yet:
+        // Do NOT generate generic or synthetic results!
+        setIsGemmaConnected(false);
+        setShowDisconnectedWriteup(true);
+
+        toast.error("Local Gemma Engine Not Connected", {
+          id: auditToastId,
+          description: "Audit halted. Generic results are suppressed per FERPA §99.31 policy until Gemma is connected.",
+          duration: 6500,
+          style: {
+            background: '#181818',
+            border: '1px solid #FF6B2B',
+            color: '#F4F2ED',
+            fontFamily: 'JetBrains Mono, monospace'
+          }
+        });
       }
-
-      const newReport: ScanReport = {
-        id: newScanId,
-        name: `Audit: ${scanTarget || './demo_target'}`,
-        timestamp: `Today, ${formattedTime}`,
-        dateFormatted: `${formattedDate} · ${formattedTime}`,
-        isoDate: now.toISOString(),
-        target: scanTarget || './demo_target',
-        scanMode: scanMode,
-        model: selectedModel,
-        selectedPacks: [...selectedPacks],
-        grade,
-        gradeColor,
-        isSampleData: isSample,
-        findings: findingsToUse,
-        remediations: remediationsToUse,
-        executiveNotes: isConnectedBackend 
-          ? `Live audit of ${scanTarget || './demo_target'} executed via FastAPI backend & ${selectedModel}. AST inspection generated ${findingsToUse.length} remediation diffs.`
-          : `Deterministic verification of ${scanTarget || './demo_target'} executed via ${selectedModel}. Generated ${findingsToUse.length} remediation diffs.`
-      };
-
-      setScanHistory(prev => {
-        const updated = [newReport, ...prev];
-        try {
-          localStorage.setItem('eduguard_scan_history', JSON.stringify(updated));
-        } catch (e) {}
-        return updated;
-      });
-      setSelectedScanId(newScanId);
-
-      toast.success(isConnectedBackend ? "Live Backend Audit Complete" : "Security Audit Complete", {
-        id: auditToastId,
-        description: isConnectedBackend
-          ? `Connected to FastAPI Backend! Scorecard Grade ${grade} · ${findingsToUse.length} findings with ${selectedModel}. Archived as ${newScanId}.`
-          : `Scorecard Grade ${grade} · ${findingsToUse.length} findings with ${selectedModel}. Archived as ${newScanId}.`,
-        duration: 4500,
-        style: {
-          background: '#181818',
-          border: isConnectedBackend ? '1px solid #00D1FF' : '1px solid #E2FF32',
-          color: '#F4F2ED',
-          fontFamily: 'JetBrains Mono, monospace'
-        }
-      });
 
       const workbenchEl = document.getElementById('workbench-anchor');
       if (workbenchEl) {
@@ -775,10 +846,10 @@ export default function App() {
                 className="flex items-center gap-3 shrink-0 text-left group cursor-pointer"
               >
                 <svg width="34" height="34" viewBox="0 0 56 56" fill="none" className="transition-transform group-hover:scale-105">
-                  <path d="M28 26L52 38L28 50L4 38Z" fill="#FF6B2B" stroke="#FF6B2B" stroke-width="4" strokeLinejoin="round"/>
-                  <path d="M28 16L52 28L28 40L4 28Z" fill="#E2FF32" stroke="#E2FF32" stroke-width="4" strokeLinejoin="round"/>
-                  <path d="M28 6L52 18L28 30L4 18Z" fill="#F4F2ED" stroke="#141414" stroke-width="3" strokeLinejoin="round"/>
-                  <ellipse cx="28" cy="18" rx="6" ry="3" fill="white" stroke="#141414" stroke-width="1.5"/>
+                  <path d="M28 26L52 38L28 50L4 38Z" fill="#FF6B2B" stroke="#FF6B2B" strokeWidth="4" strokeLinejoin="round"/>
+                  <path d="M28 16L52 28L28 40L4 28Z" fill="#E2FF32" stroke="#E2FF32" strokeWidth="4" strokeLinejoin="round"/>
+                  <path d="M28 6L52 18L28 30L4 18Z" fill="#F4F2ED" stroke="#141414" strokeWidth="3" strokeLinejoin="round"/>
+                  <ellipse cx="28" cy="18" rx="6" ry="3" fill="white" stroke="#141414" strokeWidth="1.5"/>
                 </svg>
                 <span className="font-display font-bold tracking-tight text-xl uppercase">EduGuard</span>
               </button>
@@ -813,8 +884,16 @@ export default function App() {
 
               {/* Action Zone: Model Selector & Run Audit */}
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 bg-[#141414] text-[#F4F2ED] rounded-full text-xs font-mono font-medium">
-                  <span className="text-[#E2FF32]">●</span> Local Gemma — 0KB Cloud Leak
+                <div 
+                  onClick={() => { setActivePage('audit'); setShowDisconnectedWriteup(true); }}
+                  className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 bg-[#141414] text-[#F4F2ED] rounded-full text-xs font-mono font-medium cursor-pointer border border-[#2E2E2E] hover:border-[#FF6B2B] transition-colors"
+                  title="Gemma Connection Status — Click for Connection Runbook"
+                >
+                  <span className={`w-2 h-2 rounded-full ${isGemmaConnected ? 'bg-[#E2FF32]' : 'bg-[#FF6B2B] animate-pulse'}`}></span>
+                  <span>Gemma: {isGemmaConnected ? 'Online' : 'Offline'}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isGemmaConnected ? 'bg-[#E2FF32]/20 text-[#E2FF32]' : 'bg-[#FF6B2B]/20 text-[#FF6B2B]'}`}>
+                    {isGemmaConnected ? 'Live' : 'Connect'}
+                  </span>
                 </div>
 
                 {/* GitHub & Backend Alignment Modal Trigger */}
@@ -1250,9 +1329,223 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Results Scorecard Bento */}
-                  {!isScanning && hasScanned && activeReport && (
+                  {/* Professional Write-Up: Rendered when Gemma is not connected */}
+                  {!isScanning && hasScanned && showDisconnectedWriteup && (
+                    <div className="bg-[#181818] border border-[#FF6B2B]/40 rounded-3xl p-6 sm:p-10 text-[#F4F2ED] shadow-2xl relative overflow-hidden">
+                      {/* Ambient gradient */}
+                      <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF6B2B]/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+
+                      {/* Top Badge & Live Telemetry Header */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-[#2E2E2E] gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-[#FF6B2B]/15 border border-[#FF6B2B] flex items-center justify-center text-[#FF6B2B] shrink-0">
+                            <Cpu size={24} className="animate-pulse" />
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-[#FF6B2B] uppercase tracking-wider">/ Pipeline Telemetry</span>
+                              <span className="px-2.5 py-0.5 rounded-full bg-[#FF4D4D]/20 border border-[#FF4D4D]/50 text-[#FF4D4D] text-[11px] font-mono font-bold flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#FF4D4D] animate-ping"></span>
+                                Gemma Disconnected
+                              </span>
+                              <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full bg-[#141414] border border-[#383838] text-neutral-400 text-[11px] font-mono">
+                                Generic Results Suppressed
+                              </span>
+                            </div>
+                            <h3 className="font-display font-medium text-2xl text-white mt-1">
+                              Local Gemma AI Engine Not Connected
+                            </h3>
+                          </div>
+                        </div>
+
+                        {/* Live Action Controls */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => checkGemmaLiveStatus(false)}
+                            disabled={isProbingGemma}
+                            className="px-4 py-2 rounded-full bg-[#141414] border border-[#383838] hover:border-[#E2FF32] text-xs font-mono text-neutral-200 hover:text-white transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                          >
+                            <RefreshCw size={13} className={isProbingGemma ? 'animate-spin text-[#E2FF32]' : 'text-[#E2FF32]'} />
+                            <span>{isProbingGemma ? 'Probing Socket...' : 'Test Connection'}</span>
+                          </button>
+                          <button
+                            onClick={() => { setIsSyncModalOpen(true); setActiveSyncTab('backend'); }}
+                            className="px-4 py-2 rounded-full bg-[#E2FF32] text-[#141414] text-xs font-mono font-bold hover:bg-[#d6f522] transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          >
+                            <Server size={13} />
+                            <span>Setup Guide</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Real-Time Diagnostics Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-8">
+                        <div className="bg-[#141414] p-4 rounded-xl border border-[#2E2E2E]">
+                          <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mb-1">
+                            <span>Ollama Inference Runtime</span>
+                            <span className="text-[#FF4D4D] font-bold">Unreachable</span>
+                          </div>
+                          <div className="text-sm font-mono text-white flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#FF4D4D]"></span>
+                            localhost:11434
+                          </div>
+                          <p className="text-[11px] font-mono text-neutral-500 mt-1">Local daemon for {selectedModel} inference</p>
+                        </div>
+
+                        <div className="bg-[#141414] p-4 rounded-xl border border-[#2E2E2E]">
+                          <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mb-1">
+                            <span>FastAPI Backend Gateway</span>
+                            <span className="text-[#FF6B2B] font-bold">Offline</span>
+                          </div>
+                          <div className="text-sm font-mono text-white flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#FF6B2B]"></span>
+                            localhost:8000/api/scan
+                          </div>
+                          <p className="text-[11px] font-mono text-neutral-500 mt-1">Proxy configured via Vite on /api</p>
+                        </div>
+
+                        <div className="bg-[#141414] p-4 rounded-xl border border-[#2E2E2E]">
+                          <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mb-1">
+                            <span>Target Model Specification</span>
+                            <span className="text-[#E2FF32] font-bold">Configured</span>
+                          </div>
+                          <div className="text-sm font-mono text-white flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#E2FF32]"></span>
+                            {selectedModel}
+                          </div>
+                          <p className="text-[11px] font-mono text-neutral-500 mt-1">Ready for on-device diff generation</p>
+                        </div>
+                      </div>
+
+                      {/* The Professional Write-Up Body */}
+                      <div className="space-y-6 text-sm text-neutral-300 leading-relaxed font-body">
+                        {/* Section 1: Institutional Policy */}
+                        <div className="bg-[#141414]/70 border border-[#2E2E2E] rounded-2xl p-5 sm:p-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <ShieldCheck className="text-[#E2FF32]" size={18} />
+                            <h4 className="font-display font-medium text-lg text-white">
+                              Institutional Zero-Cloud Integrity Guarantee
+                            </h4>
+                          </div>
+                          <p className="text-neutral-400 font-mono text-xs sm:text-sm leading-relaxed mb-3">
+                            EduGuard is engineered specifically for institutional and campus software architecture under the mandate of <strong className="text-white">FERPA §99.31</strong> and <strong className="text-white">NIST SP 800-171</strong>. Student information system source code, registrar database connection strings, and credential configurations cannot be transmitted to commercial public cloud LLM endpoints.
+                          </p>
+                          <p className="text-neutral-400 font-mono text-xs sm:text-sm leading-relaxed">
+                            To fulfill this guarantee, vulnerability verification and diff synthesis are executed exclusively by a verified <span className="text-[#E2FF32] font-semibold">local Gemma model instance</span> running on your hardware or campus server.
+                          </p>
+                        </div>
+
+                        {/* Section 2: Why Generic Results Are Blocked */}
+                        <div className="bg-[#141414]/70 border border-[#2E2E2E] rounded-2xl p-5 sm:p-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <AlertTriangle className="text-[#FF6B2B]" size={18} />
+                            <h4 className="font-display font-medium text-lg text-white">
+                              Why Generic / Mock Results Are Strictly Suppressed
+                            </h4>
+                          </div>
+                          <p className="text-neutral-400 font-mono text-xs sm:text-sm leading-relaxed mb-3">
+                            Unlike consumer scanners that fabricate generic mock vulnerabilities when backends are unreachable, <strong className="text-white">EduGuard strictly refuses to generate generic results</strong> without an active local Gemma node.
+                          </p>
+                          <p className="text-neutral-400 font-mono text-xs sm:text-sm leading-relaxed">
+                            Fabricating simulated security grades or synthetic finding diffs creates hazardous false confidence for university sysadmins and violates compliance audit chains of custody. An audit is only produced when the target source code or endpoint is inspected and verified by an active Gemma pipeline.
+                          </p>
+                        </div>
+
+                        {/* Section 3: Connection Guide */}
+                        <div className="bg-[#141414]/70 border border-[#2E2E2E] rounded-2xl p-5 sm:p-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Terminal className="text-[#00D1FF]" size={18} />
+                            <h4 className="font-display font-medium text-lg text-white">
+                              Quick Connection Runbook (3 Commands)
+                            </h4>
+                          </div>
+                          <p className="text-neutral-400 font-mono text-xs sm:text-sm leading-relaxed mb-4">
+                            Run these commands in your local terminal to activate the Gemma inference node and link the FastAPI gateway:
+                          </p>
+
+                          <div className="space-y-3 font-mono text-xs">
+                            <div className="bg-[#0a0a0a] p-3.5 rounded-xl border border-[#2E2E2E] flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 overflow-x-auto text-neutral-200">
+                                <span className="text-neutral-500 select-none"># 1. Pull & run local Gemma model:</span>
+                                <span className="text-[#E2FF32]">ollama run gemma:2b</span>
+                              </div>
+                              <button onClick={() => copyCmd('ollama run gemma:2b', 'cmd1')} className="px-2.5 py-1 rounded bg-[#181818] hover:bg-[#2E2E2E] text-white border border-[#383838] transition-colors shrink-0 cursor-pointer">
+                                {copiedCmdId === 'cmd1' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+
+                            <div className="bg-[#0a0a0a] p-3.5 rounded-xl border border-[#2E2E2E] flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 overflow-x-auto text-neutral-200">
+                                <span className="text-neutral-500 select-none"># 2. Launch FastAPI scanner gateway:</span>
+                                <span className="text-[#00D1FF]">uvicorn app:app --host 0.0.0.0 --port 8000 --reload</span>
+                              </div>
+                              <button onClick={() => copyCmd('uvicorn app:app --host 0.0.0.0 --port 8000 --reload', 'cmd2')} className="px-2.5 py-1 rounded bg-[#181818] hover:bg-[#2E2E2E] text-white border border-[#383838] transition-colors shrink-0 cursor-pointer">
+                                {copiedCmdId === 'cmd2' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+
+                            <div className="bg-[#0a0a0a] p-3.5 rounded-xl border border-[#2E2E2E] flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 overflow-x-auto text-neutral-200">
+                                <span className="text-neutral-500 select-none"># 3. Verify health probe:</span>
+                                <span className="text-[#FF6B2B]">curl -s http://localhost:8000/api/gemma/status</span>
+                              </div>
+                              <button onClick={() => copyCmd('curl -s http://localhost:8000/api/gemma/status', 'cmd3')} className="px-2.5 py-1 rounded bg-[#181818] hover:bg-[#2E2E2E] text-white border border-[#383838] transition-colors shrink-0 cursor-pointer">
+                                {copiedCmdId === 'cmd3' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer with actions */}
+                      <div className="mt-8 pt-6 border-t border-[#2E2E2E] flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="text-xs font-mono text-neutral-400 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#FF4D4D] animate-ping"></span>
+                          <span>Awaiting local Gemma heartbeat. Real scans execute automatically once connected.</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {scanHistory.length > 0 && (
+                            <button
+                              onClick={() => {
+                                selectScanReport(scanHistory[0].id);
+                                setShowDisconnectedWriteup(false);
+                              }}
+                              className="text-xs font-mono text-neutral-400 hover:text-white underline cursor-pointer"
+                            >
+                              View Archived Reference Baseline ({scanHistory[0].id})
+                            </button>
+                          )}
+                          <button
+                            onClick={handleRunAudit}
+                            className="px-5 py-2.5 rounded-full bg-[#E2FF32] text-[#141414] font-mono text-xs font-bold hover:bg-[#d6f522] transition-colors flex items-center gap-2 shadow-lg cursor-pointer"
+                          >
+                            <Play size={14} fill="#141414" />
+                            <span>Probe & Run Live Audit</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Results Scorecard Bento (When Gemma is Connected OR Reviewing Archived Baseline) */}
+                  {!isScanning && hasScanned && !showDisconnectedWriteup && activeReport && (
                     <div className="space-y-8">
+                      {/* Notice if viewing archived report while Gemma is disconnected */}
+                      {!isGemmaConnected && (
+                        <div className="bg-[#181818] border border-[#FF6B2B]/40 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
+                          <div className="flex items-center gap-2.5 text-[#FF6B2B]">
+                            <AlertTriangle size={16} className="shrink-0" />
+                            <span>Viewing Archived Baseline ({activeReport.id}). Live scans will strictly produce real results only when Gemma is connected.</span>
+                          </div>
+                          <button
+                            onClick={() => setShowDisconnectedWriteup(true)}
+                            className="px-3 py-1 rounded-full bg-[#FF6B2B]/20 border border-[#FF6B2B] text-[#FF6B2B] hover:bg-[#FF6B2B]/30 transition-colors cursor-pointer shrink-0"
+                          >
+                            View Gemma Connection Write-Up →
+                          </button>
+                        </div>
+                      )}
+
                       {/* Active / Historical Report Notice Bar */}
                       <div className="bg-[#181818] border border-[#383838] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
                         <div className="flex items-center gap-3.5">
@@ -1329,11 +1622,18 @@ export default function App() {
                               </div>
                             </div>
 
-                            {/* Required Fallback Sample Badge */}
-                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF6B2B]/15 border border-[#FF6B2B] text-[#FF6B2B] font-mono text-xs font-semibold">
-                              <span className="w-2 h-2 rounded-full bg-[#FF6B2B] animate-pulse"></span>
-                              Sample data - local Gemma unavailable
-                            </div>
+                            {/* Badge: Archived Baseline vs Verified Local Gemma */}
+                            {activeReport.isSampleData ? (
+                              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF6B2B]/15 border border-[#FF6B2B] text-[#FF6B2B] font-mono text-xs font-semibold">
+                                <span className="w-2 h-2 rounded-full bg-[#FF6B2B] animate-pulse"></span>
+                                Archived Benchmark Baseline
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E2FF32]/15 border border-[#E2FF32] text-[#E2FF32] font-mono text-xs font-semibold">
+                                <span className="w-2 h-2 rounded-full bg-[#E2FF32]"></span>
+                                Verified Local Gemma Audit
+                              </div>
+                            )}
 
                             {/* Engine & Mode metadata */}
                             <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141414] border border-[#2E2E2E] text-neutral-400 font-mono text-xs">
