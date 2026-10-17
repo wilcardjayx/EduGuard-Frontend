@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}EduGuard — OWASP ASVS v4.0 Educational Baseline{% endblock %}
+
+{% block content %}
+<div class="bg-charcoal-800 text-alabaster min-h-screen px-4 sm:px-8 lg:px-16 py-12 sm:py-16">
+    <div class="max-w-[1600px] mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-charcoal-600/70 pb-8 mb-12 gap-6">
+            <div>
+                <span class="font-mono text-xs text-acid font-bold uppercase tracking-wider">/ Standardized Verification</span>
+                <h1 class="font-display font-medium text-3xl sm:text-4xl text-white mt-1">
+                    OWASP ASVS v4.0 Mapping
+                </h1>
+                <p class="font-mono text-sm text-charcoal-500 mt-2 max-w-2xl">
+                    EduGuard maps higher-ed attack surfaces directly to OWASP Application Security Verification Standard (ASVS) v4.0. Audits verify institutional compliance against Levels 1 and 2 standards.
+                </p>
+            </div>
+            <div>
+                <a href="/audit" class="px-5 py-2.5 bg-acid text-charcoal-900 rounded-full text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity inline-flex items-center gap-2">
+                    Run Compliance Audit ↗
+                </a>
+            </div>
+        </div>
+
+        <!-- ASVS Chapters Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- V1 Architecture & Threat Modeling -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-mono text-xs font-bold text-tangerine">CHAPTER V1</span>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-charcoal-800 text-acid">ASVS L1/L2</span>
+                    </div>
+                    <h3 class="font-display font-medium text-lg text-white mb-2">Architecture & Email Verification</h3>
+                    <p class="font-mono text-xs text-charcoal-500 leading-relaxed mb-4">
+                        Covers section 1.14.3. Prevents institutional email domain impersonation by requiring valid DMARC, SPF, and MX authentication.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70 flex justify-between items-center">
+                    <span>Pack: Subdomain & Email</span>
+                    <span class="text-acid font-bold">EDU-DNS-001</span>
+                </div>
+            </div>
+
+            <!-- V3 Session Management -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-mono text-xs font-bold text-tangerine">CHAPTER V3</span>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-charcoal-800 text-acid">ASVS L1</span>
+                    </div>
+                    <h3 class="font-display font-medium text-lg text-white mb-2">Session Cookie Hygiene</h3>
+                    <p class="font-mono text-xs text-charcoal-500 leading-relaxed mb-4">
+                        Covers section 3.4.1. Asserts HttpOnly, Secure, and SameSite cookie flags on student portals to prevent token exfiltration via XSS.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70 flex justify-between items-center">
+                    <span>Pack: Transport & Headers</span>
+                    <span class="text-acid font-bold">EDU-HTTP-002</span>
+                </div>
+            </div>
+
+            <!-- V4 Access Control -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-mono text-xs font-bold text-crimson">CHAPTER V4</span>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-charcoal-800 text-crimson">CRITICAL</span>
+                    </div>
+                    <h3 class="font-display font-medium text-lg text-white mb-2">Access Control & IDOR Prevention</h3>
+                    <p class="font-mono text-xs text-charcoal-500 leading-relaxed mb-4">
+                        Covers section 4.2.1. Audits student transcript, financial aid, and grade endpoints to ensure records are protected against horizontal parameter manipulation.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70 flex justify-between items-center">
+                    <span>Pack: Access Control & RBAC</span>
+                    <span class="text-acid font-bold">EDU-RBAC-001</span>
+                </div>
+            </div>
+
+            <!-- V5 Injection -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-mono text-xs font-bold text-crimson">CHAPTER V5</span>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-charcoal-800 text-crimson">CRITICAL</span>
+                    </div>
+                    <h3 class="font-display font-medium text-lg text-white mb-2">Injection & Query Parameterization</h3>
+                    <p class="font-mono text-xs text-charcoal-500 leading-relaxed mb-4">
+                        Covers section 5.3.5. Flags raw string concatenation and unsanitized queries in Student Information System (SIS) database abstractions.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70 flex justify-between items-center">
+                    <span>Pack: Injection & Query</span>
+                    <span class="text-acid font-bold">EDU-SAST-001</span>
+                </div>
+            </div>
+
+            <!-- V12 File Uploads -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-mono text-xs font-bold text-tangerine">CHAPTER V12</span>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-charcoal-800 text-acid">ASVS L2</span>
+                    </div>
+                    <h3 class="font-display font-medium text-lg text-white mb-2">File Upload & PII Privacy</h3>
+                    <p class="font-mono text-xs text-charcoal-500 leading-relaxed mb-4">
+                        Covers section 12.3.1. Validates that student submission handlers reject dangerous MIME types and isolate documents from publicly served web roots.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70 flex justify-between items-center">
+                    <span>Pack: Student PII Privacy</span>
+                    <span class="text-acid font-bold">EDU-PRIV-001</span>
+                </div>
+            </div>
+
+            <!-- V14 Configuration -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-mono text-xs font-bold text-acid">CHAPTER V14</span>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-charcoal-800 text-acid">ASVS L1</span>
+                    </div>
+                    <h3 class="font-display font-medium text-lg text-white mb-2">Configuration & HSTS Posture</h3>
+                    <p class="font-mono text-xs text-charcoal-500 leading-relaxed mb-4">
+                        Covers sections 14.2.1 & 14.4.4. Detects leaked `.env` secrets, production debug flags, and missing HTTP Strict-Transport-Security.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70 flex justify-between items-center">
+                    <span>Pack: Exposed Configs</span>
+                    <span class="text-acid font-bold">EDU-CFG-001</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

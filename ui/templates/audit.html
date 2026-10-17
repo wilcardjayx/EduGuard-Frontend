@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}EduGuard — Audit Workspace & Remediation Workbench{% endblock %}
+
+{% block content %}
+<div class="bg-charcoal-800 text-alabaster min-h-screen">
+    <!-- Top Configuration Bar (Consigna Header Strip) -->
+    <section class="bg-alabaster text-charcoal-800 px-4 sm:px-8 lg:px-16 py-8 sm:py-12 border-b border-charcoal-800/10">
+        <div class="max-w-[1600px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+                <span class="font-mono text-xs text-tangerine font-bold uppercase tracking-wider">/ 01 Audit Configuration</span>
+                <h1 class="font-display font-medium text-3xl sm:text-4xl text-charcoal-800 mt-1">
+                    Security Baseline Workspace
+                </h1>
+                <p class="font-mono text-sm text-charcoal-600 mt-1">
+                    Select .EDU template packs, specify your target repo or endpoint, and launch deterministic scanning with local Gemma.
+                </p>
+            </div>
+
+            <!-- Target Command Bar -->
+            <div class="flex flex-col sm:flex-row items-center gap-2.5 p-2 bg-white border border-charcoal-800/20 rounded-2xl sm:rounded-full shadow-sm w-full lg:w-auto max-w-2xl">
+                <select id="scanMode" class="bg-neutral-50 sm:bg-transparent border border-neutral-200 sm:border-none outline-none text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 sm:py-2.5 cursor-pointer text-charcoal-800 w-full sm:w-auto rounded-lg sm:rounded-none">
+                    <option value="source_code">Source Code</option>
+                    <option value="perimeter">Perimeter</option>
+                    <option value="hybrid" selected>Hybrid</option>
+                </select>
+                <div class="w-[1px] h-7 bg-charcoal-800/10 hidden sm:block"></div>
+                <input type="text" id="targetInput" value="./demo_target" class="flex-1 bg-transparent border-none outline-none px-3 py-2 text-xs sm:text-sm font-mono text-charcoal-800 w-full sm:w-64" placeholder="Target Directory or URL">
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                    <button type="button" onclick="document.getElementById('targetInput').value='./demo_target'" class="flex-1 sm:flex-initial px-3.5 py-1.5 text-xs font-medium border border-charcoal-800/20 rounded-full hover:bg-charcoal-800 hover:text-white transition-colors whitespace-nowrap cursor-pointer text-center">
+                        Load Demo
+                    </button>
+                    <button type="button" onclick="toggleHistorySidebar()" class="flex-1 sm:flex-initial px-3.5 py-1.5 text-xs font-medium border border-charcoal-800/20 rounded-full hover:bg-charcoal-800 hover:text-white transition-colors whitespace-nowrap cursor-pointer text-center flex items-center justify-center gap-1.5" title="Open Scan History">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-tangerine"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span>History (<span id="historyCountBadge">4</span>)</span>
+                    </button>
+                    <button type="button" onclick="runScan()" class="flex-1 sm:flex-initial px-4 sm:px-0 sm:w-10 h-9 sm:h-10 bg-charcoal-800 rounded-full flex items-center justify-center text-white hover:bg-charcoal-600 transition-colors shrink-0 shadow-sm cursor-pointer gap-2 font-medium text-xs sm:text-sm" title="Execute Audit">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                        <span class="sm:hidden font-mono">Execute</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Template Packs Selection Grid -->
+    <section id="workspace" class="px-4 sm:px-8 lg:px-16 py-10 sm:py-16 max-w-[1600px] mx-auto">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-charcoal-600/70 pb-6 gap-4">
+            <div>
+                <span class="font-mono text-xs text-acid font-bold uppercase tracking-wider">/ 02 Institutional Rulesets</span>
+                <h2 class="font-display font-medium text-2xl sm:text-3xl text-white mt-1">
+                    6 Institutional Template Packs
+                </h2>
+                <p class="font-mono text-xs sm:text-sm text-charcoal-500 mt-1">Loaded directly from edu_asvs_rules.yaml single source of truth.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="toggleAllPacks()" class="px-5 py-2 border border-charcoal-600 rounded-full text-xs sm:text-sm font-medium hover:bg-charcoal-700 hover:border-alabaster transition-colors">
+                    Toggle All Packs
+                </button>
+            </div>
+        </div>
+
+        <!-- 6 Selectable Cards in 3-column Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-4">
+            {% for pack in packs %}
+                {% include "partials/pack_card.html" %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Live Remediation Workbench (Consigna Bento Architecture) -->
+    <section id="workbench" class="bg-charcoal-800 border-t border-charcoal-600/80 px-4 sm:px-8 lg:px-16 py-16 pb-28">
+        <div class="max-w-[1600px] mx-auto">
+            <!-- Scorecard Bento Header -->
+            <div id="resultsHeader" class="hidden bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 sm:p-8 mb-10 transition-all">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                    <div class="flex flex-wrap items-center gap-6 sm:gap-10">
+                        <!-- Grade & Total Findings from partial -->
+                        {% include "partials/grade_badge.html" %}
+
+                        <!-- Fallback Badge Container (shows "Sample data - local Gemma unavailable" if fallback) -->
+                        <div id="fallbackBadgeContainer" class="hidden"></div>
+                    </div>
+
+                    <!-- Actions & View Mode Toggle -->
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="inline-flex p-1 bg-charcoal-900 border border-charcoal-600 rounded-full text-xs font-mono">
+                            <button type="button" id="modeBoard" onclick="setViewMode(false)" class="px-4 py-1.5 rounded-full transition-colors bg-charcoal-800 text-acid font-bold">
+                                Board View
+                            </button>
+                            <button type="button" id="modeDev" onclick="setViewMode(true)" class="px-4 py-1.5 rounded-full transition-colors text-alabaster/70 hover:text-white">
+                                Dev Patch Diff
+                            </button>
+                        </div>
+                        <button type="button" onclick="window.print()" class="px-5 py-2 border border-charcoal-500 rounded-full text-xs sm:text-sm font-medium hover:bg-charcoal-600 hover:text-white transition-colors flex items-center gap-2">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            Export Client PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State with Real-Time Toast Notification Indicator -->
+            <div id="loadingState" class="hidden flex-col items-center justify-center py-28 space-y-4">
+                <div class="relative">
+                    <div class="w-16 h-16 border-4 border-charcoal-600 border-t-acid rounded-full animate-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="w-3 h-3 rounded-full bg-acid animate-ping"></span>
+                    </div>
+                </div>
+                <h3 id="loadingTitle" class="font-display text-2xl text-white">gemma4:e4b is Auditing...</h3>
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-charcoal-700 border border-charcoal-600 text-xs font-mono text-alabaster/70">
+                    <span class="w-2 h-2 rounded-full bg-acid animate-pulse"></span>
+                    Real-time non-blocking progress streaming to notification toasts
+                </div>
+            </div>
+
+            <!-- Findings Bento Grid Container -->
+            <div id="findingsContainer" class="space-y-6">
+                <!-- Initial Empty State -->
+                <div id="emptyState" class="text-center py-28 border border-dashed border-charcoal-600 rounded-2xl bg-charcoal-700/40">
+                    <div class="w-12 h-12 rounded-full bg-charcoal-600 flex items-center justify-center mx-auto mb-4 text-alabaster/60">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <h3 class="font-display text-xl text-white mb-1">Workbench Idle</h3>
+                    <p class="font-mono text-xs sm:text-sm text-charcoal-500 max-w-md mx-auto">
+                        Choose template packs above and click "Run Audit" to inspect findings and copy verified remediation patches.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Floating History Quick-Access Tab -->
+    <button type="button" onclick="toggleHistorySidebar()" class="fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-charcoal-700 border-l-2 border-y border-l-acid border-y-charcoal-500 text-white px-2 sm:px-2.5 py-3.5 sm:py-4 rounded-l-xl shadow-2xl flex flex-col items-center gap-2 group hover:bg-charcoal-600 transition-all cursor-pointer" title="Open Scan History Archives">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-acid group-hover:rotate-[-45deg] transition-transform"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span class="font-mono text-[10px] tracking-wider uppercase [writing-mode:vertical-lr] text-alabaster/80 font-bold group-hover:text-white">
+            History
+        </span>
+    </button>
+
+    <!-- History Sidebar Backdrop -->
+    <div id="historyBackdrop" onclick="toggleHistorySidebar(false)" class="hidden fixed inset-0 bg-black/70 backdrop-blur-xs z-50 transition-opacity"></div>
+
+    <!-- Scan History Sidebar Drawer -->
+    <aside id="historySidebar" class="fixed top-0 right-0 h-full w-full sm:w-[480px] md:w-[540px] bg-charcoal-800 border-l border-charcoal-600 shadow-2xl z-50 flex flex-col translate-x-full transition-transform duration-300 ease-out">
+        <!-- Sidebar Header -->
+        <div class="p-4 sm:p-5 border-b border-charcoal-600 bg-charcoal-700 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-acid/15 border border-acid/30 flex items-center justify-center text-acid shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-display font-medium text-lg text-white">Scan History</h2>
+                        <span id="historyFilteredBadge" class="px-2 py-0.5 rounded-full bg-charcoal-800 text-[11px] font-mono text-acid font-semibold">4 Reports</span>
+                    </div>
+                    <p class="font-mono text-xs text-alabaster/70 mt-0.5">
+                        Switch between past audit reports to view findings and verified diffs
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="toggleHistorySidebar(false)" class="w-8 h-8 rounded-full border border-charcoal-500 flex items-center justify-center text-alabaster/70 hover:text-white hover:bg-charcoal-600 transition-colors cursor-pointer" title="Close History Sidebar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="p-4 border-b border-charcoal-600 bg-charcoal-750 space-y-3">
+            <input type="text" id="historySearchInput" oninput="filterHistoryList()" placeholder="Search past scans by target, ID, or name..." class="w-full bg-charcoal-900 border border-charcoal-600 rounded-xl px-4 py-2 text-xs font-mono text-white placeholder-alabaster/40 focus:outline-none focus:border-acid transition-colors">
+        </div>
+
+        <!-- History Items Container -->
+        <div id="historyListContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <!-- Dynamic items rendered via audit.js -->
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 sm:p-5 border-t border-charcoal-600 bg-charcoal-700 flex items-center justify-between gap-3 text-xs font-mono">
+            <button type="button" onclick="resetDefaultHistory()" class="text-tangerine hover:underline cursor-pointer">
+                Reset Demo Benchmarks
+            </button>
+            <button type="button" onclick="toggleHistorySidebar(false); runScan();" class="px-4 py-2 bg-acid text-charcoal-800 font-bold rounded-xl hover:opacity-90 transition-opacity">
+                Run New Audit
+            </button>
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/ui/static/js/audit.js"></script>
+{% endblock %}

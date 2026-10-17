@@ -1,0 +1,6 @@
+{
+  "name": "EduGuard Auditor",
+  "description": "Autonomous application security audit suite for .EDU institutions, student data privacy (FERPA), and OWASP ASVS v4.0 verification with local Gemma remediation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

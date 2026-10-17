@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}EduGuard — Template Packs & Security Rule Catalog{% endblock %}
+
+{% block content %}
+<div class="bg-charcoal-800 text-alabaster min-h-screen px-4 sm:px-8 lg:px-16 py-12 sm:py-16">
+    <div class="max-w-[1600px] mx-auto">
+        <!-- Catalog Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-charcoal-600/70 pb-8 mb-12 gap-6">
+            <div>
+                <span class="font-mono text-xs text-acid font-bold uppercase tracking-wider">/ Compliance Matrix</span>
+                <h1 class="font-display font-medium text-3xl sm:text-4xl text-white mt-1">
+                    Template Pack Catalog
+                </h1>
+                <p class="font-mono text-sm text-charcoal-500 mt-2 max-w-2xl">
+                    6 specialized institutional security packs defined in <code class="text-alabaster font-mono bg-charcoal-700 px-2 py-0.5 rounded">templates/edu_asvs_rules.yaml</code>. Every check maps deterministically to an OWASP ASVS v4.0 verification baseline.
+                </p>
+            </div>
+            <div>
+                <a href="/audit" class="px-6 py-2.5 bg-acid text-charcoal-900 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity inline-flex items-center gap-2">
+                    Open Audit Workspace ↗
+                </a>
+            </div>
+        </div>
+
+        <!-- 6 Pack Breakdown Sections -->
+        <div class="space-y-8 sm:space-y-12">
+            {% for pack in packs %}
+            <div class="bg-charcoal-700 border border-charcoal-600 rounded-2xl sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
+                <!-- Pack Header -->
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center pb-6 border-b border-charcoal-600/70 gap-4">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="font-mono text-xs font-bold text-tangerine">/ {{ "%02d"|format(loop.index) }}</span>
+                            <span class="font-mono text-xs text-charcoal-500">{{ pack.id }}</span>
+                            <span class="px-2.5 py-0.5 rounded-full bg-charcoal-800 text-acid font-mono text-[11px] font-semibold">
+                                {{ pack.checks|length }} Checks Active
+                            </span>
+                        </div>
+                        <h2 class="font-display font-medium text-xl sm:text-2xl text-white">{{ pack.name }}</h2>
+                        <p class="font-mono text-xs sm:text-sm text-charcoal-500 mt-1 max-w-3xl leading-relaxed">{{ pack.description }}</p>
+                    </div>
+                    <div>
+                        <a href="/audit?pack={{ pack.id }}" class="px-4 py-2 border border-charcoal-500 hover:border-acid hover:text-acid text-alabaster rounded-full text-xs font-mono font-medium transition-colors">
+                            Audit This Pack ↗
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Checks Table for Desktop/Tablet -->
+                <div class="mt-6 overflow-x-auto hidden md:block">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead>
+                            <tr class="text-charcoal-500 border-b border-charcoal-600/40 pb-2">
+                                <th class="py-3 px-4 uppercase tracking-wider font-medium">Check ID</th>
+                                <th class="py-3 px-4 uppercase tracking-wider font-medium">Title & Attack Vector</th>
+                                <th class="py-3 px-4 uppercase tracking-wider font-medium">Severity</th>
+                                <th class="py-3 px-4 uppercase tracking-wider font-medium">Target Type</th>
+                                <th class="py-3 px-4 uppercase tracking-wider font-medium">OWASP ASVS Mapping</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-charcoal-600/30">
+                            {% for check in pack.checks %}
+                            <tr class="hover:bg-charcoal-800/40 transition-colors">
+                                <td class="py-4 px-4 font-bold text-alabaster whitespace-nowrap">{{ check.check_id }}</td>
+                                <td class="py-4 px-4 max-w-md">
+                                    <div class="font-display font-medium text-sm text-white mb-1">{{ check.title }}</div>
+                                    <div class="text-charcoal-500 font-mono text-[11px] leading-relaxed">{{ check.description }}</div>
+                                </td>
+                                <td class="py-4 px-4 whitespace-nowrap">
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase
+                                        {% if check.severity == 'CRITICAL' %}bg-crimson text-white
+                                        {% elif check.severity == 'HIGH' %}bg-tangerine text-white
+                                        {% else %}bg-acid text-charcoal-900{% endif %}">
+                                        {{ check.severity }}
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 text-charcoal-500 whitespace-nowrap capitalize">
+                                    <span class="px-2 py-0.5 rounded bg-charcoal-800 border border-charcoal-600">
+                                        {{ check.target_type }}
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 text-alabaster whitespace-nowrap font-medium">{{ check.owasp_asvs_id }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Checks Mobile Card Stack -->
+                <div class="mt-4 space-y-3 block md:hidden">
+                    {% for check in pack.checks %}
+                    <div class="bg-charcoal-800 border border-charcoal-600 rounded-xl p-4 flex flex-col gap-2.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-mono text-xs font-bold text-white">{{ check.check_id }}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                                {% if check.severity == 'CRITICAL' %}bg-crimson text-white
+                                {% elif check.severity == 'HIGH' %}bg-tangerine text-white
+                                {% else %}bg-acid text-charcoal-900{% endif %}">
+                                {{ check.severity }}
+                            </span>
+                        </div>
+                        <div class="font-display font-medium text-sm text-white">{{ check.title }}</div>
+                        <div class="text-charcoal-500 text-xs font-mono leading-relaxed">{{ check.description }}</div>
+                        <div class="flex items-center justify-between pt-2 border-t border-charcoal-600/50 text-xs font-mono text-charcoal-500">
+                            <span class="capitalize px-2 py-0.5 rounded bg-charcoal-900 border border-charcoal-600">{{ check.target_type }}</span>
+                            <span class="text-alabaster font-medium">{{ check.owasp_asvs_id }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

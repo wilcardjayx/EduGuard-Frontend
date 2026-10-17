@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}EduGuard — Gemma AI Engine & Scanner Architecture{% endblock %}
+
+{% block content %}
+<div class="bg-charcoal-800 text-alabaster min-h-screen px-4 sm:px-8 lg:px-16 py-12 sm:py-16">
+    <div class="max-w-[1600px] mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-charcoal-600/70 pb-8 mb-12 gap-6">
+            <div>
+                <span class="font-mono text-xs text-acid font-bold uppercase tracking-wider">/ Engine Pipeline</span>
+                <h1 class="font-display font-medium text-3xl sm:text-4xl text-white mt-1">
+                    Scanner & Gemma AI Architecture
+                </h1>
+                <p class="font-mono text-sm text-charcoal-500 mt-2 max-w-2xl">
+                    EduGuard pairs deterministic rule engines with local Gemma inference for verified remediation without sending institution source code or student records to cloud APIs.
+                </p>
+            </div>
+            <div>
+                <a href="/audit" class="px-5 py-2.5 bg-acid text-charcoal-900 rounded-full text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity inline-flex items-center gap-2">
+                    Launch Scanner ↗
+                </a>
+            </div>
+        </div>
+
+        <!-- 3-Stage Pipeline Diagram Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <!-- Stage 1 -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+                <div>
+                    <span class="font-mono text-xs font-bold text-tangerine">STAGE 01</span>
+                    <h3 class="font-display font-medium text-xl text-white mt-2 mb-3">Deterministic Engine</h3>
+                    <p class="font-mono text-xs sm:text-sm text-charcoal-500 leading-relaxed mb-4">
+                        Scans the target codebase or perimeter using AST pattern matching, Semgrep rules, DNS resolver queries, and TLS header validation.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70">
+                    <span class="text-acid">✔</span> Zero Hallucinations · Strict OWASP ASVS
+                </div>
+            </div>
+
+            <!-- Stage 2 -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+                <div>
+                    <span class="font-mono text-xs font-bold text-acid">STAGE 02</span>
+                    <h3 class="font-display font-medium text-xl text-white mt-2 mb-3">Local Gemma Remediator</h3>
+                    <p class="font-mono text-xs sm:text-sm text-charcoal-500 leading-relaxed mb-4">
+                        Findings are passed to a locally hosted Gemma instance via Ollama (<code class="text-white">gemma4:e4b</code> or <code class="text-white">gemma2:2b</code>) to generate unified diff patches and executive summaries.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70">
+                    <span class="text-acid">✔</span> 100% Offline · 0KB Cloud Leakage
+                </div>
+            </div>
+
+            <!-- Stage 3 -->
+            <div class="bg-charcoal-700 border border-charcoal-500 rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+                <div>
+                    <span class="font-mono text-xs font-bold text-crimson">STAGE 03</span>
+                    <h3 class="font-display font-medium text-xl text-white mt-2 mb-3">One-Click Remediation</h3>
+                    <p class="font-mono text-xs sm:text-sm text-charcoal-500 leading-relaxed mb-4">
+                        Engine computes institutional security grade (A through F), correlates FERPA compliance liabilities, and formats copyable Git patches.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-charcoal-600 text-xs font-mono text-alabaster/70">
+                    <span class="text-acid">✔</span> Unified Diff · Board & Dev Modes
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Specification Card -->
+        <div class="bg-charcoal-900 border border-charcoal-600 rounded-2xl p-6 sm:p-8">
+            <h3 class="font-display font-medium text-lg text-white mb-4">Privacy & FERPA Invariant</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs font-mono text-charcoal-500 leading-relaxed">
+                <div class="p-4 bg-charcoal-800 rounded-xl border border-charcoal-700">
+                    <span class="text-white font-bold block mb-1">Local Model Execution</span>
+                    Model inference runs directly on host machine CPU/GPU using Ollama. No payload, source snippet, or token is transmitted to external API endpoints.
+                </div>
+                <div class="p-4 bg-charcoal-800 rounded-xl border border-charcoal-700">
+                    <span class="text-white font-bold block mb-1">Deterministic Verification</span>
+                    Vulnerability detection is 100% deterministic, backed by YAML specifications in <code class="text-alabaster">templates/edu_asvs_rules.yaml</code>.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

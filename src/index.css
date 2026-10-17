@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-charcoal-900: #0a0a0a;
+    --color-charcoal-800: #141414;
+    --color-charcoal-700: #181818;
+    --color-charcoal-600: #2E2E2E;
+    --color-charcoal-500: #383838;
+    --color-alabaster: #F4F2ED;
+    --color-acid: #E2FF32;
+    --color-tangerine: #FF6B2B;
+    --color-crimson: #FF4D4D;
+  }
+
+  body {
+    background-color: var(--color-charcoal-800);
+    font-family: 'Inter', sans-serif;
+    color: var(--color-charcoal-800);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+}
+
+.font-display {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Adaptive Outer Viewport Frame: Desktop Displays Only (>1024px) */
+@media (min-width: 1025px) {
+  #global-frame {
+    position: fixed;
+    inset: 0;
+    border: 14px solid var(--color-charcoal-800);
+    border-radius: 24px;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  #viewport-content {
+    width: 100%;
+    min-height: 100vh;
+    padding: 14px;
+    box-sizing: border-box;
+    background-color: var(--color-charcoal-800);
+  }
+
+  #scroll-container {
+    width: 100%;
+    min-height: calc(100vh - 28px);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background-color: var(--color-alabaster);
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Mobile & Tablet Full-Bleed Viewport (<=1024px): Zero Frame, Zero Padding, Zero Clipping */
+@media (max-width: 1024px) {
+  #global-frame {
+    display: none !important;
+  }
+
+  #bottom-cutout {
+    display: none !important;
+  }
+
+  #viewport-content {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    background-color: transparent !important;
+    overflow-x: hidden !important;
+  }
+
+  #scroll-container {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: transparent !important;
+    overflow-x: hidden !important;
+  }
+}
+
+/* Pack Card Active State Styles (Acid Yellow #E2FF32) */
+.pack-card.active .card-body {
+  background-color: var(--color-acid) !important;
+  border-color: var(--color-acid) !important;
+}
+.pack-card.active .tab-fill {
+  fill: var(--color-acid) !important;
+}
+.pack-card.active .tab-stroke {
+  stroke: var(--color-acid) !important;
+}
+.pack-card.active .tab-text,
+.pack-card.active .card-title {
+  color: var(--color-charcoal-800) !important;
+}
+.pack-card.active .unselected-icon {
+  opacity: 0;
+  pointer-events: none;
+}
+.pack-card.active .selected-content {
+  opacity: 1;
+}
+.pack-card.active .check-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Pack Card Unselected Hover State: turns Tangerine Orange (#FF6B2B) */
+.pack-card:not(.active):hover .card-body {
+  background-color: var(--color-tangerine) !important;
+  border-color: var(--color-tangerine) !important;
+}
+.pack-card:not(.active):hover .tab-fill {
+  fill: var(--color-tangerine) !important;
+}
+.pack-card:not(.active):hover .tab-stroke {
+  stroke: var(--color-tangerine) !important;
+}
+.pack-card:not(.active):hover .tab-text {
+  color: var(--color-charcoal-800) !important;
+}
+.pack-card:not(.active):hover .card-title {
+  color: var(--color-charcoal-800) !important;
+}
+.pack-card:not(.active):hover .unselected-icon svg {
+  stroke: var(--color-charcoal-800) !important;
+}
+
+/* Pack Card Rounded Edges & Seamless Tab Geometry */
+.pack-card {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  padding-top: 22px;
+  overflow: visible;
+  transition: transform 0.2s ease;
+}
+.pack-card:active {
+  transform: scale(0.99);
+}
+.pack-card .folder-tab-wrap {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 20;
+  pointer-events: none;
+  line-height: 0;
+}
+.pack-card .folder-tab-svg {
+  display: block;
+  overflow: visible;
+}
+.pack-card .card-body {
+  border-radius: 20px;
+  border-top-left-radius: 0;
+  position: relative;
+  z-index: 10;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+  min-height: 290px;
+}
+
+/* Responsive Card Rounded Edges & Spacing for Mobile Devices */
+@media (max-width: 640px) {
+  .pack-card {
+    padding-top: 22px;
+  }
+  .pack-card .card-body {
+    border-radius: 18px;
+    border-top-left-radius: 0;
+    min-height: 270px;
+    padding: 1.25rem;
+    padding-top: 2rem;
+  }
+}

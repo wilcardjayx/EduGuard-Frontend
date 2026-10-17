@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EduGuard AI — Autonomous Security Auditor for .EDU{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/ui/static/css/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        charcoal: {
+                            900: '#0a0a0a',
+                            800: '#141414',
+                            700: '#181818',
+                            600: '#2E2E2E',
+                            500: '#383838',
+                        },
+                        alabaster: '#F4F2ED',
+                        acid: '#E2FF32',
+                        tangerine: '#FF6B2B',
+                        crimson: '#FF4D4D',
+                    }
+                }
+            }
+        }
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Persistent Viewport Overlay Frame -->
+    <div id="global-frame"></div>
+
+    <!-- Main Viewport Layout -->
+    <div id="viewport-content">
+        <div id="scroll-container">
+            <!-- Global Top Navigation Bar -->
+            <header class="bg-alabaster text-charcoal-800 border-b border-charcoal-800/10 relative z-30">
+                <nav class="flex justify-between items-center px-4 sm:px-8 py-4 sm:py-5 pointer-events-auto">
+                    <!-- Brand Zone -->
+                    <a href="/" class="flex items-center gap-3 shrink-0 group">
+                        <svg width="34" height="34" viewBox="0 0 56 56" fill="none" class="transition-transform group-hover:scale-105">
+                            <path d="M28 26L52 38L28 50L4 38Z" fill="#FF6B2B" stroke="#FF6B2B" stroke-width="4" stroke-linejoin="round"/>
+                            <path d="M28 16L52 28L28 40L4 28Z" fill="#E2FF32" stroke="#E2FF32" stroke-width="4" stroke-linejoin="round"/>
+                            <path d="M28 6L52 18L28 30L4 18Z" fill="#F4F2ED" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+                            <ellipse cx="28" cy="18" rx="6" ry="3" fill="white" stroke="#141414" stroke-width="1.5"/>
+                        </svg>
+                        <span class="font-display font-bold tracking-tight text-xl uppercase">EduGuard</span>
+                    </a>
+
+                    <!-- Nav Links Zone (Desktop) -->
+                    <div class="hidden md:flex items-center gap-6 px-6 py-2 border border-charcoal-800 rounded-full bg-white/70 backdrop-blur-sm text-sm font-medium shadow-sm">
+                        <a href="/audit" class="transition-colors whitespace-nowrap shrink-0 hover:text-charcoal-900 {% if active_page == 'audit' %}font-bold text-charcoal-900 border-b-2 border-charcoal-900 -mb-[2px]{% else %}text-charcoal-600{% endif %}">
+                            Scanner
+                        </a>
+                        <a href="/templates" class="transition-colors whitespace-nowrap shrink-0 hover:text-charcoal-900 {% if active_page == 'templates' %}font-bold text-charcoal-900 border-b-2 border-charcoal-900 -mb-[2px]{% else %}text-charcoal-600{% endif %}">
+                            Template Packs
+                        </a>
+                        <a href="/owasp" class="transition-colors whitespace-nowrap shrink-0 hover:text-charcoal-900 {% if active_page == 'owasp' %}font-bold text-charcoal-900 border-b-2 border-charcoal-900 -mb-[2px]{% else %}text-charcoal-600{% endif %}">
+                            OWASP ASVS
+                        </a>
+                        <a href="/engine" class="transition-colors whitespace-nowrap shrink-0 hover:text-charcoal-900 {% if active_page == 'engine' %}font-bold text-charcoal-900 border-b-2 border-charcoal-900 -mb-[2px]{% else %}text-charcoal-600{% endif %}">
+                            Gemma Engine
+                        </a>
+                    </div>
+
+                    <!-- Actions & Model Selector Zone -->
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="hidden xl:flex items-center gap-2 px-3.5 py-1.5 bg-charcoal-800 text-alabaster rounded-full text-xs font-mono font-medium">
+                            <span class="text-acid">●</span> Local Gemma — 0KB Cloud Leak
+                        </div>
+                        
+                        <!-- Dynamic Model Selector -->
+                        <select id="aiModelSelector" class="px-3.5 py-2 bg-charcoal-800 text-alabaster rounded-full text-xs font-mono font-medium border border-charcoal-600 outline-none cursor-pointer hover:border-alabaster transition-colors">
+                            <option value="gemma4:e4b" selected>gemma4:e4b</option>
+                            <option value="gemma2:2b">gemma2:2b</option>
+                        </select>
+
+                        <!-- Primary CTA -->
+                        <a href="/audit" class="hidden sm:inline-flex px-5 py-2 bg-charcoal-800 text-alabaster rounded-full text-sm font-medium hover:bg-charcoal-700 transition-colors items-center gap-2">
+                            Run Audit <span>↗</span>
+                        </a>
+
+                        <!-- Mobile Hamburger Button -->
+                        <button id="mobileMenuBtn" aria-label="Toggle navigation menu" aria-expanded="false" class="md:hidden p-2 rounded-lg text-charcoal-800 hover:bg-black/5 transition-colors">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </nav>
+
+                <!-- Collapsible Mobile Navigation Drawer -->
+                <div id="mobileNavMenu" class="mobile-nav-menu md:hidden absolute top-full left-0 w-full bg-alabaster border-b border-charcoal-800/10 shadow-lg px-6 py-6 flex flex-col gap-4 z-40">
+                    <a href="/" class="text-base font-medium {% if active_page == 'landing' %}font-bold text-charcoal-900{% else %}text-charcoal-600{% endif %}">Home</a>
+                    <a href="/audit" class="text-base font-medium {% if active_page == 'audit' %}font-bold text-charcoal-900{% else %}text-charcoal-600{% endif %}">Scanner & Workbench</a>
+                    <a href="/templates" class="text-base font-medium {% if active_page == 'templates' %}font-bold text-charcoal-900{% else %}text-charcoal-600{% endif %}">Template Packs</a>
+                    <a href="/owasp" class="text-base font-medium {% if active_page == 'owasp' %}font-bold text-charcoal-900{% else %}text-charcoal-600{% endif %}">OWASP ASVS Matrix</a>
+                    <a href="/engine" class="text-base font-medium {% if active_page == 'engine' %}font-bold text-charcoal-900{% else %}text-charcoal-600{% endif %}">Gemma AI Remediator</a>
+                    <div class="pt-3 border-t border-charcoal-800/10">
+                        <a href="/audit" class="w-full py-2.5 bg-charcoal-800 text-alabaster rounded-full text-sm font-medium text-center block">
+                            Launch Audit ↗
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Page Content Slot -->
+            <main class="flex-1 w-full">
+                {% block content %}{% endblock %}
+            </main>
+
+            <!-- Quiet Site Footer -->
+            <footer class="bg-charcoal-900 text-alabaster/60 border-t border-charcoal-700 px-6 sm:px-12 py-8 text-xs font-mono">
+                <div class="max-w-[1600px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-acid font-bold">EduGuard</span>
+                        <span>·</span>
+                        <span>Autonomous Educational Security Auditor</span>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <a href="/audit" class="hover:text-white transition-colors">Scanner</a>
+                        <a href="/templates" class="hover:text-white transition-colors">6 Template Packs</a>
+                        <a href="/owasp" class="hover:text-white transition-colors">OWASP ASVS v4.0</a>
+                        <a href="/engine" class="hover:text-white transition-colors">Gemma Engine</a>
+                    </div>
+                    <div>
+                        <span>Local Gemma4:E4B / Gemma2:2B — Zero Cloud Data Leakage</span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="/ui/static/js/main.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
