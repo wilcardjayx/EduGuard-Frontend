@@ -1254,54 +1254,68 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-4">
                   {TEMPLATE_PACKS.map((pack, idx) => {
                     const isActive = selectedPacks.includes(pack.id);
                     return (
                       <div 
                         key={pack.id}
                         onClick={() => togglePack(pack.id)}
-                        className={`pack-card relative cursor-pointer select-none group ${isActive ? 'active' : ''}`}
+                        className={`pack-card rounded-[20px] border p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 cursor-pointer select-none group min-h-[250px] sm:min-h-[270px] ${
+                          isActive 
+                            ? 'active bg-[#E2FF32] border-[#E2FF32] text-[#141414] shadow-md shadow-[#E2FF32]/10' 
+                            : 'bg-[#181818] border-[#383838] text-white hover:border-[#FF6B2B]'
+                        }`}
                       >
-                        {/* Folder Tab SVG Geometry (Seamless Flush Design) */}
-                        <div className="folder-tab-wrap absolute top-0 left-0 w-[114px] h-[28px] z-20 pointer-events-none">
-                          <svg width="114" height="28" viewBox="0 0 114 28" fill="none" className="folder-tab-svg block">
-                            <path d="M0 22C0 9.5 9.5 0 20 0H78C86 0 93.5 4.8 96.5 12.2L98 16C99.5 19.5 103 22 106.8 22H114" stroke={isActive ? '#E2FF32' : '#383838'} strokeWidth="1.5" className="tab-stroke"/>
-                            <path d="M0 22C0 9.5 9.5 0 20 0H78C86 0 93.5 4.8 96.5 12.2L98 16C99.5 19.5 103 22 106.8 22H114V28H0Z" fill={isActive ? '#E2FF32' : '#181818'} className="tab-fill"/>
-                          </svg>
-                          <span className="absolute top-1 left-4 font-mono text-[11px] font-bold text-neutral-400 tracking-wider tab-text z-30">
-                            / 0{idx + 1}
-                          </span>
+                        {/* Top Indicator Row: Number Indicator & Check Status */}
+                        <div className="flex items-center justify-between gap-3 mb-4">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`num-indicator font-mono text-xs font-bold tracking-wider px-2.5 py-1 rounded-md transition-colors ${
+                              isActive 
+                                ? 'bg-[#141414]/15 text-[#141414]' 
+                                : 'bg-[#252525] text-neutral-400'
+                            }`}>
+                              / 0{idx + 1}
+                            </span>
+                            <span className={`checks-pill px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-colors ${
+                              isActive 
+                                ? 'bg-[#141414]/10 text-[#141414]' 
+                                : 'bg-[#252525] text-neutral-400'
+                            }`}>
+                              {pack.checks.length} Checks Loaded
+                            </span>
+                          </div>
+
+                          {/* Selection Checkmark Bubble */}
+                          <div className={`check-bubble w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                            isActive 
+                              ? 'bg-[#141414] text-[#E2FF32] scale-100 shadow-sm' 
+                              : 'border border-[#383838] bg-[#222222] text-neutral-500 scale-95'
+                          }`}>
+                            <Check size={16} className={`stroke-[3] transition-transform ${isActive ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`} />
+                          </div>
                         </div>
 
-                        {/* Card Body */}
-                        <div className={`card-body h-full border rounded-[20px] rounded-tl-none p-5 sm:p-6 pt-10 sm:pt-12 flex flex-col justify-between transition-colors duration-200 relative overflow-hidden ${isActive ? 'bg-[#E2FF32] border-[#E2FF32] text-[#141414]' : 'bg-[#181818] border-[#383838]'}`}>
-                          {/* Unselected Icon */}
-                          {!isActive && (
-                            <div className="unselected-icon absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-200 opacity-60">
-                              <ShieldAlert size={44} className="stroke-[#2E2E2E]" />
-                            </div>
-                          )}
+                        {/* Description - Text wraps inside cleanly without any overlap */}
+                        <div className="flex-1 flex flex-col justify-center my-2">
+                          <p className={`font-mono text-xs sm:text-sm leading-relaxed transition-colors break-words ${
+                            isActive 
+                              ? 'text-[#141414]' 
+                              : 'text-neutral-300'
+                          }`}>
+                            {pack.description}
+                          </p>
+                        </div>
 
-                          {/* Selected Content */}
-                          <div className={`transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-0'} flex-1 flex flex-col`}>
-                            <p className="font-mono text-xs sm:text-sm leading-relaxed mb-4 text-[#141414] line-clamp-4">{pack.description}</p>
-                            <div className="mt-auto">
-                              <span className="inline-block px-3 py-1 bg-[#141414]/10 rounded-full text-xs font-bold text-[#141414]">
-                                {pack.checks.length} Checks Loaded
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Title & Check Badge */}
-                          <div className="mt-6 sm:mt-8 flex justify-between items-end relative z-10 gap-3">
-                            <h3 className={`font-display font-medium text-lg sm:text-[20px] leading-tight card-title ${isActive ? 'text-[#141414]' : 'text-white'} flex-1`}>
-                              {pack.name}
-                            </h3>
-                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${isActive ? 'bg-[#141414] opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-                              <Check size={18} className="text-[#E2FF32] stroke-[3]" />
-                            </div>
-                          </div>
+                        {/* Card Title & Bottom Zone */}
+                        <div className={`divider-line mt-4 pt-3.5 border-t flex items-center justify-between transition-colors ${
+                          isActive ? 'border-[#141414]/15' : 'border-[#2E2E2E]'
+                        }`}>
+                          <h3 className={`font-display font-medium text-base sm:text-[18px] leading-snug card-title transition-colors ${
+                            isActive ? 'text-[#141414]' : 'text-white'
+                          }`}>
+                            {pack.name}
+                          </h3>
                         </div>
                       </div>
                     );

@@ -96,98 +96,59 @@
   }
 }
 
-/* Pack Card Active State Styles (Acid Yellow #E2FF32) */
-.pack-card.active .card-body {
-  background-color: var(--color-acid) !important;
-  border-color: var(--color-acid) !important;
-}
-.pack-card.active .tab-fill {
-  fill: var(--color-acid) !important;
-}
-.pack-card.active .tab-stroke {
-  stroke: var(--color-acid) !important;
-}
-.pack-card.active .tab-text,
-.pack-card.active .card-title {
-  color: var(--color-charcoal-800) !important;
-}
-.pack-card.active .unselected-icon {
-  opacity: 0;
-  pointer-events: none;
-}
-.pack-card.active .selected-content {
-  opacity: 1;
-}
-.pack-card.active .check-badge {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Pack Card Unselected Hover State: turns Tangerine Orange (#FF6B2B) */
-.pack-card:not(.active):hover .card-body {
-  background-color: var(--color-tangerine) !important;
-  border-color: var(--color-tangerine) !important;
-}
-.pack-card:not(.active):hover .tab-fill {
-  fill: var(--color-tangerine) !important;
-}
-.pack-card:not(.active):hover .tab-stroke {
-  stroke: var(--color-tangerine) !important;
-}
-.pack-card:not(.active):hover .tab-text {
-  color: var(--color-charcoal-800) !important;
-}
-.pack-card:not(.active):hover .card-title {
-  color: var(--color-charcoal-800) !important;
-}
-.pack-card:not(.active):hover .unselected-icon svg {
-  stroke: var(--color-charcoal-800) !important;
-}
-
-/* Pack Card Rounded Edges & Seamless Tab Geometry */
+/* Pack Card Rounded Edge Rectangle Styling */
 .pack-card {
   position: relative;
   cursor: pointer;
   user-select: none;
   width: 100%;
-  padding-top: 22px;
-  overflow: visible;
-  transition: transform 0.2s ease;
+  border-radius: 20px;
+  overflow: hidden;
+  transition: transform 0.2s ease, background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 .pack-card:active {
   transform: scale(0.99);
 }
-.pack-card .folder-tab-wrap {
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  z-index: 20;
-  pointer-events: none;
-  line-height: 0;
-}
-.pack-card .folder-tab-svg {
-  display: block;
-  overflow: visible;
-}
-.pack-card .card-body {
-  border-radius: 20px;
-  border-top-left-radius: 0;
-  position: relative;
-  z-index: 10;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
-  min-height: 290px;
+
+/* Pack Card Active State (Acid Yellow #E2FF32) */
+.pack-card.active {
+  background-color: var(--color-acid) !important;
+  border-color: var(--color-acid) !important;
+  color: var(--color-charcoal-800) !important;
 }
 
-/* Responsive Card Rounded Edges & Spacing for Mobile Devices */
+/* Pack Card Unselected Hover State: turns Tangerine Orange (#FF6B2B) */
+.pack-card:not(.active):hover {
+  background-color: var(--color-tangerine) !important;
+  border-color: var(--color-tangerine) !important;
+  color: var(--color-charcoal-800) !important;
+}
+.pack-card:not(.active):hover .card-title,
+.pack-card:not(.active):hover p,
+.pack-card:not(.active):hover span {
+  color: var(--color-charcoal-800) !important;
+}
+.pack-card:not(.active):hover .num-indicator {
+  background-color: rgba(20, 20, 20, 0.15) !important;
+  color: var(--color-charcoal-800) !important;
+}
+.pack-card:not(.active):hover .checks-pill {
+  background-color: rgba(20, 20, 20, 0.12) !important;
+  color: var(--color-charcoal-800) !important;
+}
+.pack-card:not(.active):hover .check-bubble {
+  border-color: var(--color-charcoal-800) !important;
+  background-color: var(--color-charcoal-800) !important;
+  color: #ffffff !important;
+}
+.pack-card:not(.active):hover .divider-line {
+  border-color: rgba(20, 20, 20, 0.2) !important;
+}
+
+/* Responsive Card Rounded Edges for Mobile Devices */
 @media (max-width: 640px) {
   .pack-card {
-    padding-top: 22px;
-  }
-  .pack-card .card-body {
     border-radius: 18px;
-    border-top-left-radius: 0;
-    min-height: 270px;
-    padding: 1.25rem;
-    padding-top: 2rem;
   }
 }
+
